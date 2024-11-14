@@ -6,7 +6,7 @@ from .models import User, Warrant, DisabilityRecord
 
 class CustomUserAdmin(UserAdmin):
     model = User
-    list_display = ['username', 'first_name', 'last_name', 'email', 'role', 'gender', 'phone_number', 'is_staff']
+    list_display = ['username', 'email','first_name', 'last_name', 'email', 'role', 'gender', 'phone_number', 'is_staff']
     search_fields = ['username', 'first_name', 'last_name', 'email']
     ordering = ['username']
 
