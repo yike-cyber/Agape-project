@@ -1,3 +1,6 @@
-from django.contrib import admin
+# from django.contrib import admin
+# from .models import User, Warrant, DisabilityRecord
 
-# Register your models here.
+# admin.site.register(User)
+# admin.site.register(Warrant)
+# admin.site.register(DisabilityRecord)
