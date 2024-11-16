@@ -28,14 +28,23 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    USERNAME_FIELDS = 'email'
+    USERNAME_FIELD = 'email'
     
     REQUIRED_FIELDS =['first_name','last_name']
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"
+    
+    @property
+    def get_full_name(self):
+        return f"{self.first_name} {self.middle_name} {self.last_name}"
 
-
+class OneTimePassword(models.Model):
+    user = models.OneToOneField(User,on_delete = models.CASCADE)
+    code = models.CharField(max_length=6,unique=True)
+    
+    def __str__(self):
+        return  f'{self.user.user_name}-passcode'
 
 class Warrant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

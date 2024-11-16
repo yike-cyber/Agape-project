@@ -13,20 +13,23 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+import environ
 
-
+env = environ.Env(
+    DEBUG = (bool,False)
+)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+environ.Env.read_env(BASE_DIR/'.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2m3fejn+61%_*dk26#=@8q+p9kuv%5&08)hwp$5@!h1yrw(!xr'
-
+SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = []
 
@@ -165,13 +168,11 @@ CORS_ALLOW_METHODS = [
     'OPTIONS',
 ]
 
-# Allow all origins (use with caution in production)
 CORS_ALLOW_ALL_ORIGINS = True
 
-# OR specify allowed origins (recommended for production)
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Frontend development server
-    "https://your-production-site.com",  # Your production frontend
+    "http://localhost:3000",  
+    "https://production-site.com",  
 ]
 
 # Allow credentials 
@@ -189,3 +190,11 @@ CORS_ALLOW_HEADERS = [
     'cache-control',
     'x-csrftoken',
 ]
+
+
+EMAIL_HOST = 'smtp.mailtrap.io'
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = 'yikebermisganaw@gmail.com'
+EMAIL_PORT = '2525'
+EMAIL_USE_TLS = True
