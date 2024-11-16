@@ -96,7 +96,7 @@ WSGI_APPLICATION = 'agape.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+
 
 DATABASES = {
     'default': {
@@ -152,3 +152,40 @@ MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'api.User'
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
+# Allow all origins (use with caution in production)
+CORS_ALLOW_ALL_ORIGINS = True
+
+# OR specify allowed origins (recommended for production)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Frontend development server
+    "https://your-production-site.com",  # Your production frontend
+]
+
+# Allow credentials 
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow specific headers
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-requested-with',
+    'accept',
+    'origin',
+    'user-agent',
+    'dnt',
+    'cache-control',
+    'x-csrftoken',
+]

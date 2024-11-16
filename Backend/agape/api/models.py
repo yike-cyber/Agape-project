@@ -17,12 +17,20 @@ ROLE_CHOICES = [
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.CharField(max_length = 100,unique = True)
+    first_name = models.CharField(max_length=50,verbose_name = 'first name')
+    middle_name = models.CharField(max_length=50,null=True,verbose_name = 'middle name')
+    last_name = models.CharField(max_length=50,verbose_name = 'last name')
     gender = models.CharField(max_length=10,null=True, choices=GENDER_CHOICES)
     phone_number = models.CharField(max_length=15,null=True, unique=True)
     profile_image = models.ImageField(upload_to='user_profile_images/',default='default_profile_image/avatar.png', blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES,default='field_worker')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    USERNAME_FIELDS = 'email'
+    
+    REQUIRED_FIELDS =['first_name','last_name']
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"
@@ -48,6 +56,7 @@ class DisabilityRecord(models.Model):
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    phone_number = models.CharField(max_length=15,null=True, unique=True)
     date_of_birth = models.DateField()
     region = models.CharField(max_length=100,null=True,blank=True)
     zone = models.CharField(max_length=100,null=True,blank=True)

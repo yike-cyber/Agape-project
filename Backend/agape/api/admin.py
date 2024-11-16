@@ -6,9 +6,9 @@ from .models import User, Warrant, DisabilityRecord
 
 class CustomUserAdmin(UserAdmin):
     model = User
-    list_display = ['username', 'email','first_name', 'last_name', 'email', 'role', 'gender', 'phone_number', 'is_staff']
-    search_fields = ['username', 'first_name', 'last_name', 'email']
-    ordering = ['username']
+    list_display = [ 'first_name','middle_name', 'last_name', 'email', 'role', 'gender', 'phone_number', 'is_staff']
+    search_fields = ['first_name', 'last_name', 'email','phone_number']
+    ordering = ['first_name']
 
 
 admin.site.register(User, CustomUserAdmin)
