@@ -14,22 +14,26 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import environ
-
 env = environ.Env(
     DEBUG = (bool,False)
 )
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+import environ
+import os
+
+# Initialize environment variables
+env = environ.Env(
+    DEBUG=(bool, False)  # Default DEBUG to False if not set
+)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-environ.Env.read_env(BASE_DIR/'.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+# Read the .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+
 
 ALLOWED_HOSTS = []
 
@@ -45,25 +49,29 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'api',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 
+# Simple JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Token expiration time for access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Token expiration time for refresh token
+    'ROTATE_REFRESH_TOKENS': False,                  # Do not rotate refresh tokens by default
+    'BLACKLIST_AFTER_ROTATION': True,                # Blacklist the old refresh token after it's rotated
+    'AUTH_HEADER_TYPES': ('Bearer',),                # Use "Bearer" authentication in the Authorization header
 }
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -192,9 +200,14 @@ CORS_ALLOW_HEADERS = [
 ]
 
 
-EMAIL_HOST = 'smtp.mailtrap.io'
+
+ # Email backend configuration
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = 'yikebermisganaw@gmail.com'
-EMAIL_PORT = '2525'
-EMAIL_USE_TLS = True
+FRONTEND_URL = env('FRONTEND_URL')
