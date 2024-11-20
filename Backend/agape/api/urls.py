@@ -1,20 +1,35 @@
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
+from .views import (
+    RegisterView, VerifyEmailView, LoginView, ResetPasswordView,
+    SetNewPasswordView, LogoutView,
+     UserListCreateView, UserDetailView, UserFilterView,
+    WarrantListCreateView, WarrantDetailView,
+    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordFilterView
 )
 
-from .views import RegisterUserView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), 
-    path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),  
-    path('reset_password/email/', TokenVerifyView.as_view(), name='reset-password'),  
+    #auth user
+    path('auth/register/', RegisterView.as_view(), name='user-register'),
+    path('auth/email-verify/', VerifyEmailView.as_view(), name='email-verify'),
+    path('auth/login/', LoginView.as_view(), name='login'),
+    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  
+    path('auth/reset-password/', ResetPasswordView.as_view(), name='password-reset'),
+    path('auth/reset-password-confirm/', SetNewPasswordView.as_view(), name='password-reset-confirm'),
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
     
-    path('register/', RegisterUserView.as_view(), name='register'),
-  
+       # User Endpoints
+    path('users/', UserListCreateView.as_view(), name='user-list-create'),
+    path('users/<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/filter/', UserFilterView.as_view(), name='user-filter'),
     
+    # Warrant Endpoints
+    path('warrants/', WarrantListCreateView.as_view(), name='warrant-list-create'),
+    path('warrants/<uuid:id>/', WarrantDetailView.as_view(), name='warrant-detail'),
     
+    # DisabilityRecord Endpoints
+    path('disability-records/', DisabilityRecordListCreateView.as_view(), name='disability-record-list-create'),
+    path('disability-records/<uuid:id>/', DisabilityRecordDetailView.as_view(), name='disability-record-detail'),
+    path('disability-records/filter/', DisabilityRecordFilterView.as_view(), name='disability-record-filter'),
 ]

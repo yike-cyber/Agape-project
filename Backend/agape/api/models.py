@@ -1,6 +1,33 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
+from django.utils.safestring import mark_safe
+from django.contrib.auth.models import BaseUserManager
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        """
+        Create and return a superuser with the given email and password.
+        """
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, password, **extra_fields)
+
 
 # Gender Choices
 GENDER_CHOICES = [
@@ -28,7 +55,10 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    username = None
     USERNAME_FIELD = 'email'
+    
+    objects = CustomUserManager()
     
     REQUIRED_FIELDS =['first_name','last_name']
 
@@ -38,13 +68,13 @@ class User(AbstractUser):
     @property
     def get_full_name(self):
         return f"{self.first_name} {self.middle_name} {self.last_name}"
-
-class OneTimePassword(models.Model):
-    user = models.OneToOneField(User,on_delete = models.CASCADE)
-    code = models.CharField(max_length=6,unique=True)
     
-    def __str__(self):
-        return  f'{self.user.user_name}-passcode'
+    
+def profile_image(self):
+    if self.profile_image:
+        return mark_safe(f'<img src="{self.profile_image.url}" width="50" height="50" />')
+    return mark_safe(f'<img src="{settings.MEDIA_URL}default_profile_image/avatar.png" width="50" height="50" />')
+
 
 class Warrant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -80,7 +110,6 @@ class DisabilityRecord(models.Model):
     kebele_id_image = models.ImageField(upload_to='disability_kebele_id_images/',null=True,blank=True)
     wheelchair_type = models.CharField(max_length=100)
     is_provided = models.BooleanField(default=False)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_disability_records')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
