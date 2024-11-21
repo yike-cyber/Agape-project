@@ -23,7 +23,7 @@ import os
 
 # Initialize environment variables
 env = environ.Env(
-    DEBUG=(bool, False)  # Default DEBUG to False if not set
+    DEBUG=(bool, False)  
 )
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     
 ]
@@ -66,11 +67,12 @@ REST_FRAMEWORK = {
 
 # Simple JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Token expiration time for access token
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Token expiration time for refresh token
-    'ROTATE_REFRESH_TOKENS': False,                  # Do not rotate refresh tokens by default
-    'BLACKLIST_AFTER_ROTATION': True,                # Blacklist the old refresh token after it's rotated
-    'AUTH_HEADER_TYPES': ('Bearer',),                # Use "Bearer" authentication in the Authorization header
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    
+    'ROTATE_REFRESH_TOKENS': False,                
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,               
+    'AUTH_HEADER_TYPES': ('Bearer',),                
 }
 
 MIDDLEWARE = [
@@ -200,6 +202,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 
+APPEND_SLASH = False
 
  # Email backend configuration
 SECRET_KEY = env('SECRET_KEY')

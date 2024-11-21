@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    RegisterView, VerifyEmailView, LoginView, ResetPasswordView,
+    RegisterView, VerifyEmailView,VerifyOTPView, LoginView, ResetPasswordView,
     SetNewPasswordView, LogoutView,
      UserListCreateView, UserDetailView, UserFilterView,
     WarrantListCreateView, WarrantDetailView,
@@ -16,7 +16,8 @@ urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  
     path('auth/reset-password/', ResetPasswordView.as_view(), name='password-reset'),
-    path('auth/reset-password-confirm/', SetNewPasswordView.as_view(), name='password-reset-confirm'),
+    path('auth/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('auth/set-new-password/', SetNewPasswordView.as_view(), name='set-new-password'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     
        # User Endpoints

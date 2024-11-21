@@ -4,6 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils.translation import gettext_lazy as _
 
 from .models import Warrant,DisabilityRecord
+from .utils import validate_password
 User = get_user_model()
 
 
@@ -11,17 +12,16 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'middle_name', 'last_name', 'gender', 'phone_number', 'profile_image', 'role', 'created_at', 'updated_at']
-        
 
 class WarrantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Warrant
-        fields = ['id', 'first_name', 'middle_name', 'last_name', 
-                  'gender', 'phone_number', 'id_image']
+        fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 'phone_number', 'id_image']
 
 class DisabilityRecordSerializer(serializers.ModelSerializer):
-    recorder = UserSerializer()
+    recorder = UserSerializer(read_only=True)
     warrant = WarrantSerializer()
+
     class Meta:
         model = DisabilityRecord
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 
@@ -29,6 +29,18 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
                   'woreda', 'recorder', 'warrant', 'seat_width', 'backrest_height', 
                   'seat_depth', 'profile_image', 'kebele_id_image', 'wheelchair_type', 
                   'is_provided',]
+
+    def create(self, validated_data):
+        warrant_data = validated_data.pop('warrant')
+        warrant = Warrant.objects.create(**warrant_data)  # Create Warrant
+
+        # Create Disability Record and set the 'recorder' to the current user
+        disability_record = DisabilityRecord.objects.create(
+            **validated_data,
+            recorder=self.context['request'].user,  # Set recorder to current user
+            warrant=warrant
+        )
+        return disability_record
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
@@ -88,22 +100,22 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("Email not found"))
         return value
 
-
 class SetNewPasswordSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-    confirm_password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
 
     def validate(self, attrs):
         password = attrs.get('password')
-        confirm_password = attrs.get('confirm_password')
+        password2 = attrs.get('password2')
 
-        if password != confirm_password:
+        # Ensure passwords match
+        if password != password2:
             raise serializers.ValidationError(_("Passwords don't match."))
 
-        # Validate password strength
+        # Call custom validate_password function from utils.py
         try:
             validate_password(password)
-        except Exception as e:
+        except ValidationError as e:
             raise serializers.ValidationError({'password': e.messages})
 
         return attrs
