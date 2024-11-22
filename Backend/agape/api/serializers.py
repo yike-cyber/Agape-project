@@ -28,7 +28,7 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
                   'phone_number', 'date_of_birth', 'region', 'zone', 'city', 
                   'woreda', 'recorder','warrant', 'seat_width', 'backrest_height', 
                   'seat_depth', 'profile_image', 'kebele_id_image', 'wheelchair_type', 
-                  'is_provided',]
+                  'is_provided','deleted']
 
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant',None)

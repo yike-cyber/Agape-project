@@ -15,6 +15,8 @@ from rest_framework_simplejwt.token_blacklist.models import  BlacklistedToken,Ou
 
 from uuid import UUID
 import random
+from django.utils import timezone
+from datetime import datetime
 import jwt
 from django.core.cache import cache
 from .models import User,Warrant,DisabilityRecord
@@ -294,11 +296,12 @@ class UserFilterView(generics.ListAPIView):
 
         return queryset
     
-# List and Create Warrants
+# List of warrents
 class WarrantListCreateView(generics.ListCreateAPIView):
     queryset = Warrant.objects.all()
     serializer_class = WarrantSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
 
 # Retrieve, Update, and Delete Warrant
 class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -315,7 +318,14 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
     queryset = DisabilityRecord.objects.all()
     serializer_class = DisabilityRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    
+    def get_object(self):
+        try:
+           queryset =self.queryset.filter(deleted = False)
+           return queryset
+        except DisabilityRecord.DoesNotExist:
+           raise NotFound(detail="disability not found.")
+        
     def perform_create(self, serializer):
         serializer.save()
 
@@ -334,23 +344,110 @@ class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DisabilityRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'
+    
+    def get_object(self):
+        disability_id = self.kwargs.get(self.lookup_field)
+        try:
+            disability = self.queryset.get(id=disability_id)
+            if  disability.deleted:
+                raise NotFound(detail="disability is deactivated and cannot be accessed.")
+            return disability
+        except DisabilityRecord.DoesNotExist:
+            raise NotFound(detail="disability not found.")
 
+    def delete(self, request, *args, **kwargs):
+        disability = self.get_object()
+        disability.deleted = True  
+        disability.save()
+        return Response({"detail": "Disability deleted successfully."}, status=status.HTTP_200_OK)
+        
 # Filter Disability Records
-class DisabilityRecordFilterView(generics.ListAPIView):
+class DisabilityRecordListFilterView(generics.ListAPIView):
     serializer_class = DisabilityRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         queryset = DisabilityRecord.objects.all()
-        is_provided = self.request.query_params.get('is_provided')
-        region = self.request.query_params.get('region')
-        recorder = self.request.query_params.get('recorder')
 
-        if is_provided:
-            queryset = queryset.filter(is_provided=is_provided.lower() == 'true')
+        # Get query parameters from the request
+        gender = self.request.query_params.get('gender')
+        region = self.request.query_params.get('region')
+        wheelchair_type = self.request.query_params.get('wheelchair_type')
+        month = self.request.query_params.get('month')
+        year = self.request.query_params.get('year')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+
+        # Filter by gender if provided
+        if gender:
+            queryset = queryset.filter(gender__iexact=gender)
+
+        # Filter by region if provided
         if region:
             queryset = queryset.filter(region__icontains=region)
-        if recorder:
-            queryset = queryset.filter(recorder__id=recorder)
-        
+
+        # Filter by wheelchair type if provided
+        if wheelchair_type:
+            queryset = queryset.filter(wheelchair_type__icontains=wheelchair_type)
+
+        # Filter by month and year if provided
+        if month and year:
+            try:
+                month = int(month)
+                year = int(year)
+                queryset = queryset.filter(date_of_birth__month=month, date_of_birth__year=year)
+            except ValueError:
+                pass  # Ignore if invalid month/year format
+
+        # Filter by start_date and end_date if provided
+        if start_date:
+            try:
+                # Parse and make the start_date timezone aware
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                start_date = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                queryset = queryset.filter(created_at__gte=start_date)
+            except ValueError:
+                pass  # Ignore if invalid start_date format
+
+        if end_date:
+            try:
+                # Parse and make the end_date timezone aware
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                end_date = timezone.make_aware(datetime.combine(end_date, datetime.min.time()))
+                queryset = queryset.filter(created_at__lte=end_date)
+            except ValueError:
+                pass  # Ignore if invalid end_date format
+
+        return queryset
+
+class DisabilityRecordSearchView(generics.ListAPIView):
+    queryset = DisabilityRecord.objects.all()
+    serializer_class = DisabilityRecordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = DisabilityRecord.objects.filter(deleted=False)
+
+        # Get the search term from query parameters
+        search_term = self.request.query_params.get('search', None)
+        if search_term:
+            filters = Q()
+
+            # Apply search term to the relevant fields
+            filters |= Q(gender__icontains=search_term)
+            filters |= Q(region__icontains=search_term)
+            filters |= Q(wheelchair_type__icontains=search_term)
+            filters |= Q(first_name__icontains=search_term)
+            filters |= Q(middle_name__icontains=search_term)
+            filters |= Q(last_name__icontains=search_term)
+            filters |= Q(city__icontains=search_term)
+            filters |= Q(zone__icontains=search_term)
+            filters |= Q(woreda__icontains=search_term)
+            filters |= Q(seat_width__icontains=search_term)
+            filters |= Q(backrest_height__icontains=search_term)
+            filters |= Q(seat_depth__icontains=search_term)
+
+            # Apply the filters to the queryset
+            queryset = queryset.filter(filters)
+
         return queryset
