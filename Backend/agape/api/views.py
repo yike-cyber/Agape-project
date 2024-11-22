@@ -230,11 +230,24 @@ class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 # Retrieve, Update, and Delete User
-class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+
+class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.AllowAny]
-    lookup_field = 'id'
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'  
+
+    def get(self, request, *args, **kwargs):
+        user_id = self.kwargs.get(self.lookup_field)
+        try:
+            user = self.queryset.get(id=user_id)
+            print('user is',user)
+        except User.DoesNotExist:
+            print('exception',str(e))
+            raise NotFound(detail="User not found.")
+        
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
 
 # Filter Users by Role
 class UserFilterView(generics.ListAPIView):
