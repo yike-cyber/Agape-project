@@ -1,4 +1,5 @@
 from django.contrib.auth import login, logout, authenticate
+from django.db.models import Q
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework import generics, permissions
 from rest_framework.exceptions import NotFound
@@ -263,19 +264,36 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         self.perform_update(serializer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-# Filter Users by Role
+
+#filter users by search param and role
 class UserFilterView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        query = self.request.query_params.get('search', '')
         role = self.request.query_params.get('role')
+
+        queryset = User.objects.all()
+
         if role:
-            return User.objects.filter(role=role)
-        return User.objects.all()
+            queryset = queryset.filter(role__icontains=role)
 
+        if query:
+            queryset = queryset.filter(
+                Q(email__icontains=query) |
+                Q(gender__icontains=query) |
+                Q(first_name__icontains=query) |
+                Q(middle_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(phone_number__icontains=query)
+            )
 
+        if not queryset.exists():
+            raise NotFound(detail="No users found matching the search criteria.")
 
+        return queryset
+    
 # List and Create Warrants
 class WarrantListCreateView(generics.ListCreateAPIView):
     queryset = Warrant.objects.all()
