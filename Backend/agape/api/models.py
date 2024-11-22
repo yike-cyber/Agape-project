@@ -33,7 +33,6 @@ class CustomUserManager(BaseUserManager):
 GENDER_CHOICES = [
     ('male', 'Male'),
     ('female', 'Female'),
-    ('other', 'Other'),
 ]
 
 # Role Choices
