@@ -191,42 +191,17 @@ class SetNewPasswordView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # Step 1: Get the access token from the Authorization header
-        access_token = request.headers.get('Authorization', '').split(' ')[-1]
+        # Retrieve all outstanding tokens for the current user
+        tokens = OutstandingToken.objects.filter(user_id=request.user.id)
+        for token in tokens:
+            # Blacklist each token (create if not already blacklisted)
+            BlacklistedToken.objects.get_or_create(token=token)
 
-        if not access_token:
-            return Response({"error": "Access token is missing."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            # Step 2: Decode the access token to verify its validity
-            decoded_token = AccessToken(access_token)
-            user_id = decoded_token['user_id']
-            print(f"Logging out user with ID: {user_id}")
-
-            # Step 3: Check if the OutstandingToken exists
-            outstanding_token = OutstandingToken.objects.filter(token=access_token).first()
-
-            if not outstanding_token:
-                return Response({"error": "Token not found or already expired."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Step 4: Blacklist the token to invalidate it
-            BlacklistedToken.objects.create(token=outstanding_token)
-
-            # Optional: Delete the OutstandingToken after blacklisting
-            outstanding_token.delete()
-
-            return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            # Catch any errors, log them for debugging
-            print(f"Error during logout: {str(e)}")
-            return Response({"error": f"Error during logout: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "Logged out successful."}, status=status.HTTP_205_RESET_CONTENT)
 
 class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all()
