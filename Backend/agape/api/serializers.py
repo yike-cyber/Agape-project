@@ -26,20 +26,21 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         model = DisabilityRecord
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 
                   'phone_number', 'date_of_birth', 'region', 'zone', 'city', 
-                  'woreda', 'recorder', 'warrant', 'seat_width', 'backrest_height', 
+                  'woreda', 'recorder','warrant', 'seat_width', 'backrest_height', 
                   'seat_depth', 'profile_image', 'kebele_id_image', 'wheelchair_type', 
                   'is_provided',]
 
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant')
-        warrant = Warrant.objects.create(**warrant_data)  # Create Warrant
 
         # Create Disability Record and set the 'recorder' to the current user
         disability_record = DisabilityRecord.objects.create(
             **validated_data,
-            recorder=self.context['request'].user,  # Set recorder to current user
-            warrant=warrant
+            recorder=self.context['request'].user,  
         )
+        if warrant:
+            warrant = Warrant.objects.create(**warrant_data)  # Create Warrant
+            disability_record.warrant = warrant
         return disability_record
 
 class RegisterSerializer(serializers.ModelSerializer):
