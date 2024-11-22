@@ -31,14 +31,13 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
                   'is_provided',]
 
     def create(self, validated_data):
-        warrant_data = validated_data.pop('warrant')
-
+        warrant_data = validated_data.pop('warrant',None)
         # Create Disability Record and set the 'recorder' to the current user
         disability_record = DisabilityRecord.objects.create(
             **validated_data,
             recorder=self.context['request'].user,  
         )
-        if warrant:
+        if warrant_data:
             warrant = Warrant.objects.create(**warrant_data)  # Create Warrant
             disability_record.warrant = warrant
         return disability_record
