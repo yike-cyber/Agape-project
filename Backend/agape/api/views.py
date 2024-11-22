@@ -229,25 +229,38 @@ class UserListCreateView(generics.ListCreateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# Retrieve, Update, and Delete User
 
-class UserDetailView(generics.RetrieveAPIView):
+
+# Retrieve, Update, and Delete User
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
-    lookup_field = 'id'  
+    lookup_field = 'id' 
 
-    def get(self, request, *args, **kwargs):
+    def get_object(self):
         user_id = self.kwargs.get(self.lookup_field)
         try:
             user = self.queryset.get(id=user_id)
-            print('user is',user)
+            if not user.is_active:
+                raise NotFound(detail="User is deactivated and cannot be accessed.")
+            return user
         except User.DoesNotExist:
-            print('exception',str(e))
             raise NotFound(detail="User not found.")
-        
-        serializer = self.get_serializer(user)
-        return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        user = self.get_object()
+        user.is_active = False  
+        user.save()
+        return Response({"detail": "User deactivated successfully."}, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)  
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Filter Users by Role
 class UserFilterView(generics.ListAPIView):
