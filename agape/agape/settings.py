@@ -17,31 +17,21 @@ import environ
 env = environ.Env(
     DEBUG = (bool,False)
 )
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-import environ
-import os
-
-# Initialize environment variables
-env = environ.Env(
-    DEBUG=(bool, False)  
-)
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Read the .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = env('DEBUG')
+DEBUG = True
 
-
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['*']
 
 # Application definition
-
 INSTALLED_APPS = [
-     'django.contrib.admin',
+    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -52,10 +42,16 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    
 ]
 
 REST_FRAMEWORK = {
+     'DEFAULT_PAGINATION_CLASS': 'api.pagination.CustomPageNumberPagination',
+     'PAGE_SIZE': 10,
+     'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',  # Add this to ensure JSON responses
+    ],
+     
+
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
@@ -63,7 +59,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
-
 
 # Simple JWT settings
 SIMPLE_JWT = {
@@ -78,8 +73,7 @@ SIMPLE_JWT = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -107,10 +101,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agape.wsgi.application'
 
-
-# Database
-
-
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -122,11 +113,7 @@ DATABASES = {
     }
 }
 
-
-
 # Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -142,58 +129,30 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-
+# Internationalization settings
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
 STATIC_URL = 'static/'
 MEDIA_URL = 'media/'
-
-MEDIA_ROOT = os.path.join(BASE_DIR,'media')
-
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom user model
 AUTH_USER_MODEL = 'api.User'
 
+# CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
-
-
-CORS_ALLOW_METHODS = [
-    'GET',
-    'POST',
-    'PUT',
-    'PATCH',
-    'DELETE',
-    'OPTIONS',
-]
-
-CORS_ALLOW_ALL_ORIGINS = True
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  
     "https://production-site.com",  
 ]
-
-# Allow credentials 
 CORS_ALLOW_CREDENTIALS = True
-
-# Allow specific headers
 CORS_ALLOW_HEADERS = [
     'authorization',
     'content-type',
@@ -206,12 +165,9 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
 ]
 
-
 APPEND_SLASH = False
 
- # Email backend configuration
-SECRET_KEY = env('SECRET_KEY')
-DEBUG = env.bool('DEBUG', default=False)
+# Email backend configuration
 EMAIL_HOST = env('EMAIL_HOST')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
