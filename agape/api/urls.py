@@ -4,7 +4,8 @@ from .views import (
     SetNewPasswordView, LogoutView,
      UserListCreateView, UserDetailView, UserFilterView,
     WarrantListCreateView, WarrantDetailView,
-    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView,DisabilityRecordSearchView
+    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView
+    
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -33,5 +34,4 @@ urlpatterns = [
     path('disability-records/', DisabilityRecordListCreateView.as_view(), name='disability-record-list-create'),
     path('disability-records/<uuid:id>/', DisabilityRecordDetailView.as_view(), name='disability-record-detail'),
     path('disability-records/filter/', DisabilityRecordListFilterView.as_view(), name='disability-record-filter'),
-    path('disability-records/search/', DisabilityRecordSearchView.as_view(), name='disability-record-filter'),
 ]
