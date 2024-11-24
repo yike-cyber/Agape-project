@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
+
 import os
 import environ
 env = environ.Env(
@@ -99,24 +101,30 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'agape.wsgi.application'
+DATABASE_URL = os.getenv(
+    'POSTGRES_URL',
+    'postgres://postgres.ujkeujhkpxlqkqofiyjw:NtfmIOf1plsFBRIF@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require'
+)
 
- #PostgreSQL Database Configuration
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
-        'OPTIONS': {
-            'sslmode': 'require',  # Secure connection
-        },
-    }
+    'default': dj_database_url.config(default=DATABASE_URL)
 }
 
+ #PostgreSQL Database Configuration
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'agape_db',
+#         'USER': 'postgres',
+#         'PASSWORD':'NtfmIOf1plsFBRIF',
+#         'HOST': 'aws-0-us-east-1.pooler.supabase.com',
+#         'PORT': env('DB_PORT'),
+    
+#     }
+# }
+
 # Supabase JWT Secret (Optional if needed for verification)
-SUPABASE_JWT_SECRET = env('SUPABASE_JWT_SECRET')
+# SUPABASE_JWT_SECRET = env('SUPABASE_JWT_SECRET')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
