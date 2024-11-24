@@ -100,6 +100,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agape.wsgi.application'
 
+ #PostgreSQL Database Configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -108,8 +109,14 @@ DATABASES = {
         'PASSWORD': env('DB_PASSWORD'),
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
+        'OPTIONS': {
+            'sslmode': 'require',  # Secure connection
+        },
     }
 }
+
+# Supabase JWT Secret (Optional if needed for verification)
+SUPABASE_JWT_SECRET = env('SUPABASE_JWT_SECRET')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
