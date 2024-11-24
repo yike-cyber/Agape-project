@@ -1,3 +1,6 @@
 /venv
 /agape/.env
 /api request.rest
+
+agape/static
+agape/staticfiles_build
