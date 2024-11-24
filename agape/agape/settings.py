@@ -27,7 +27,6 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -139,30 +138,24 @@ STATIC_URL = 'static/'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+STATICFILES_DIRS = os.path.join(BASE_DIR, 'static'),
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
+
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model
 AUTH_USER_MODEL = 'api.User'
 
-# CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+
+ALLOWED_HOSTS = ['*.vercel.app', 'localhost', '127.0.0.1']
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  
-    "https://production-site.com",  
+    "http://localhost:3000", 
+    "https://agape.vercel.app",  
 ]
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = [
-    'authorization',
-    'content-type',
-    'x-requested-with',
-    'accept',
-    'origin',
-    'user-agent',
-    'dnt',
-    'cache-control',
-    'x-csrftoken',
-]
+CORS_ALLOW_ALL_ORIGINS = True 
 
 APPEND_SLASH = False
 
