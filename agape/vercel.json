@@ -12,6 +12,5 @@
       "src": "/(.*)",
       "dest": "/agape/wsgi.py"
     }
-  ],
-  "rewrites": [{ "source": "/(.*)", "dest": "/agape/wsgi.py" }]
+  ]
 }
