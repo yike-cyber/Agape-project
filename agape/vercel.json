@@ -24,8 +24,14 @@
       "dest": "/media/$1"
     },
     {
-      "src": "/api/(.*)",
+      "src": "/(.*)",
       "dest": "agape/wsgi.py"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }
