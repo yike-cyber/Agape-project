@@ -10,8 +10,8 @@
   "routes": [
     {
       "src": "/(.*)",
-      "destination": "agape/wsgi.py"
+      "dest": "/agape/wsgi.py"
     }
   ],
-  "rewrites": [{ "src": "/(.*)", "dest": "agape/wsgi.py" }]
+  "rewrites": [{ "source": "/(.*)", "dest": "/agape/wsgi.py" }]
 }
