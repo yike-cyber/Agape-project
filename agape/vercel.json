@@ -10,7 +10,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "agape/wsgi.py"
+      "dest": "/agape/wsgi.py"
     }
   ]
 }
