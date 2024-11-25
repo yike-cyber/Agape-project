@@ -1,5 +1,8 @@
 from django.http import JsonResponse
 
+def home(request):
+    return JsonResponse('This is the api for agape project')
+
 # Custom 404 Not Found Response
 def custom_page_not_found(request, exception):
     return JsonResponse({
@@ -47,3 +50,4 @@ def custom_unprocessable_entity(request, exception):
         'message': 'Unprocessable entity. Check the data you provided.',
         'error_code': 422
     }, status=422)
+    
