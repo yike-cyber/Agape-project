@@ -3,17 +3,26 @@
     {
       "src": "agape/wsgi.py",
       "use": "@vercel/python",
-      "config": { "maxLambdaSize": "15mb", "runtime": "python3.11.8" }
+      "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
+    },
+    {
+      "src": "build_files.sh",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "staticfiles_build" }
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "agape/wsgi.py"
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
     },
     {
       "src": "/media/(.*)",
       "dest": "/media/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "agape/wsgi.py"
     }
   ]
 }
