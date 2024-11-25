@@ -1,7 +1,8 @@
 from django.http import JsonResponse
 
 def home(request):
-    return JsonResponse('This is the api for agape project')
+    data = ['message', 'successfull api !']  # A list
+    return JsonResponse(data, safe=False) 
 
 # Custom 404 Not Found Response
 def custom_page_not_found(request, exception):
