@@ -16,16 +16,16 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "agape/wsgi.py"
+    },
+    {
       "src": "/static/(.*)",
       "dest": "/static/$1"
     },
     {
       "src": "/media/(.*)",
       "dest": "/media/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "agape/wsgi.py"
     }
   ],
   "rewrites": [
