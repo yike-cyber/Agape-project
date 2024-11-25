@@ -157,10 +157,6 @@ AUTH_USER_MODEL = 'api.User'
 
 ALLOWED_HOSTS = ['*.vercel.app', 'localhost', '127.0.0.1']
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", 
-    "https://agape.vercel.app",  
-]
 CORS_ALLOW_ALL_ORIGINS = True 
 
 APPEND_SLASH = False

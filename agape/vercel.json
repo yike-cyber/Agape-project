@@ -24,7 +24,7 @@
       "dest": "/media/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "agape/wsgi.py"
     }
   ]
