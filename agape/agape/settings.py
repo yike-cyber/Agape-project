@@ -46,20 +46,23 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-     'DEFAULT_PAGINATION_CLASS': 'api.pagination.CustomPageNumberPagination',
-     'PAGE_SIZE': 10,
-     'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',  # Add this to ensure JSON responses
+    
+  'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
     ],
-     
-
+    'DEFAULT_PARSER_CLASSES': [
+         'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
 }
+
 
 # Simple JWT settings
 SIMPLE_JWT = {
@@ -103,28 +106,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'agape.wsgi.application'
 DATABASE_URL = os.getenv(
     'POSTGRES_URL',
-    'postgres://postgres.ujkeujhkpxlqkqofiyjw:NtfmIOf1plsFBRIF@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require'
+    'postgres://postgres.ujkeujhkpxlqkqofiyjw:agape_user%40123@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require'
 )
 
 DATABASES = {
     'default': dj_database_url.config(default=DATABASE_URL)
 }
 
- #PostgreSQL Database Configuration
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'agape_db',
-#         'USER': 'postgres',
-#         'PASSWORD':'NtfmIOf1plsFBRIF',
-#         'HOST': 'aws-0-us-east-1.pooler.supabase.com',
-#         'PORT': env('DB_PORT'),
-    
-#     }
-# }
 
-# Supabase JWT Secret (Optional if needed for verification)
-# SUPABASE_JWT_SECRET = env('SUPABASE_JWT_SECRET')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -149,14 +138,16 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
-MEDIA_URL = 'media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-STATICFILES_DIRS = os.path.join(BASE_DIR, 'static'),
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
+# Static files configuration
+STATIC_URL = '/static/'  
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')  
 
+# Optional but recommended: Additional static files directories
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
+MEDIA_URL = '/media/' 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

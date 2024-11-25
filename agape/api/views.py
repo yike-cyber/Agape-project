@@ -27,30 +27,25 @@ from .constants import SUCCESS_RESPONSE, ERROR_RESPONSE
 
 
 class RegisterView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated] 
 
     def post(self, request):
-        # Check if the user is authorized to create new users (Admin or superuser)
         if not request.user.is_superuser and request.user.role != 'Admin':
             response_data = ERROR_RESPONSE.copy()
             response_data["message"] = "You are not authorized to create users."
             response_data["error_code"] = 403
             return Response(response_data, status=status.HTTP_403_FORBIDDEN)
 
-        # Validate the serializer with the data received in the request
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
-            # Generate token and UID for email verification
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(str(user.pk).encode())
 
-            # Construct the email verification link dynamically
-            current_domain = request.get_host()  # To get the domain dynamically
+            current_domain = request.get_host()  
             verification_link = f'http://{current_domain}/api/auth/email-verify/?uid={uid}&token={token}'
 
-            # Send email with the verification link
             subject = 'Email Verification for Agape'
             message = f'Click the link to verify your email: {verification_link}'
             recipient_list = [user.email]
@@ -68,7 +63,6 @@ class RegisterView(APIView):
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
 
-        # If serializer is invalid, return the error response with validation errors
         response_data = ERROR_RESPONSE.copy()
         response_data["message"] = "Bad request. Please check the provided data."
         response_data["error_code"] = 400
@@ -81,7 +75,6 @@ class VerifyEmailView(APIView):
         uidb64 = request.GET.get('uid')
         token = request.GET.get('token')
 
-        # Default error response for invalid or expired token
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
             user = User.objects.get(pk=uid)
@@ -91,7 +84,6 @@ class VerifyEmailView(APIView):
             response_data["error_code"] = 400
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-        # Token verification and activation of user
         if default_token_generator.check_token(user, token):
             user.is_active = True
             user.save()
@@ -129,7 +121,6 @@ class LoginView(APIView):
             user = authenticate(request, email=email, password=password)
 
             if user:
-                # Generate JWT tokens
                 refresh = RefreshToken.for_user(user)
                 success_response["message"] = "Login successful."
                 success_response["data"] = {
@@ -148,7 +139,6 @@ class LoginView(APIView):
     
 class ResetPasswordView(APIView):
     def post(self, request):
-        # Prepare success and error response templates
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
@@ -163,13 +153,10 @@ class ResetPasswordView(APIView):
                 error_response["error_code"] = "email_not_found"
                 return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-            # Generate OTP
             otp = str(random.randint(100000, 999999))  # 6-digit OTP
 
-            # Store OTP in the cache using email as the key (timeout is 5 minutes)
             cache.set(f"reset_password_otp_{email}", otp, timeout=300)
 
-            # Send OTP via email
             send_email(
                 'Password Reset OTP',
                 f'Your password reset OTP is: {otp} It will expire after 5 minutes.',
