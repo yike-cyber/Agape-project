@@ -27,11 +27,10 @@ def send_email(subject, message, recipient_list):
 
 
 def validate_password(password):
-    if len(password) < 8:
+    if len(password) < 6:
         raise ValidationError(_("Password must be at least 8 characters long."))
 
     if " " in password:
         raise ValidationError(_("Password should not contain spaces."))
 
-    # If all checks pass, return the password
     return password

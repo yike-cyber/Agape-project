@@ -9,6 +9,8 @@ from rest_framework.exceptions import NotFound
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -32,7 +34,7 @@ class RegisterView(APIView):
     permission_classes = [IsAuthenticated] 
 
     def post(self, request):
-        if not request.user.is_superuser and request.user.role != 'Admin':
+        if not request.user.is_superuser and request.user.role != 'admin':
             response_data = ERROR_RESPONSE.copy()
             response_data["message"] = "You are not authorized to create users."
             response_data["error_code"] = 403
@@ -130,42 +132,45 @@ class LoginView(APIView):
         error_response["errors"] = serializer.errors
         return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
     
-class ResetPasswordView(APIView):
+
+class SetNewPasswordView(APIView):
+    permission_classes = [AllowAny]  # Allow any user to access the view
+
     def post(self, request):
+        # Prepare success and error response templates
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
         # Validate input data
-        serializer = ResetPasswordSerializer(data=request.data)
+        serializer = SetNewPasswordSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
+            email = request.data.get("email")
+
+            if not email:
+                error_response["message"] = "Email is required."
+                error_response["error_code"] = "missing_email"
+                return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
+
             try:
                 user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                error_response["message"] = "Email not found."
-                error_response["error_code"] = "email_not_found"
+
+            except ObjectDoesNotExist:
+                error_response["message"] = "User with the provided email does not exist."
+                error_response["error_code"] = "user_not_found"
                 return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-            otp = str(random.randint(100000, 999999))  # 6-digit OTP
+            new_password = serializer.validated_data['password']
+            user.set_password(new_password)
+            user.save()
 
-            cache.set(f"reset_password_otp_{email}", otp, timeout=300)
-
-            send_email(
-                'Password Reset OTP',
-                f'Your password reset OTP is: {otp} It will expire after 5 minutes.',
-                [email]
-            )
-            print('OTP sent successfully!')
-
-            # Prepare success response
-            success_response["message"] = "OTP sent to your email."
+            success_response["message"] = "Password updated successfully."
             return Response(success_response, status=status.HTTP_200_OK)
 
-        # Invalid data from serializer
+        # If serializer is invalid, return the error response
         error_response["message"] = "Invalid data provided."
+        error_response["error_code"] = "invalid_data"
         error_response["errors"] = serializer.errors
-        return Response(error_response, status=status.HTTP_400_BAD_REQUEST)  
-
+        return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VerifyOTPView(APIView):
@@ -204,7 +209,7 @@ class VerifyOTPView(APIView):
 
 
 class SetNewPasswordView(APIView):
-    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access this view
+    permission_classes = [AllowAny]  # Ensure only authenticated users can access this view
 
     def post(self, request):
         # Prepare success and error response templates
