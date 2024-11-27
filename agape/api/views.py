@@ -1,4 +1,5 @@
 from django.contrib.auth import login, logout, authenticate
+from django.template.loader import render_to_string
 from django.db.models import Q
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
@@ -69,7 +70,6 @@ class RegisterView(APIView):
         response_data["errors"] = serializer.errors
         return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-
 class VerifyEmailView(APIView):
     def get(self, request):
         uidb64 = request.GET.get('uid')
@@ -79,33 +79,25 @@ class VerifyEmailView(APIView):
             uid = urlsafe_base64_decode(uidb64).decode()
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            response_data = ERROR_RESPONSE.copy()
-            response_data["message"] = "Invalid or expired token."
-            response_data["error_code"] = 400
-            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+            html_content = render_to_string('email_verification_failed.html', {
+                "message": "Invalid or expired token.",
+            })
+            return HttpResponse(html_content, status=400, content_type="text/html")
 
         if default_token_generator.check_token(user, token):
             user.is_active = True
             user.save()
 
-            # Success response
-            response_data = SUCCESS_RESPONSE.copy()
-            response_data["message"] = "Email verified successfully."
-            response_data["data"] = {
-                "id": user.id,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "is_active": user.is_active
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
+            html_content = render_to_string('email_verification_success.html', {
+                "message": "Email verified successfully!",
+                "user": user,
+            })
+            return HttpResponse(html_content, status=200, content_type="text/html")
 
-        # Invalid or expired token response
-        response_data = ERROR_RESPONSE.copy()
-        response_data["message"] = "Invalid or expired token."
-        response_data["error_code"] = 400
-        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
-
+        html_content = render_to_string('email_verification_failed.html', {
+            "message": "Invalid or expired token.",
+        })
+        return HttpResponse(html_content, status=400, content_type="text/html")
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -729,9 +721,10 @@ class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
 class DisabilityRecordListFilterView(generics.ListAPIView):
     serializer_class = DisabilityRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
         queryset = DisabilityRecord.objects.all()
+        
 
         # Get query parameters from the request
         gender = self.request.query_params.get('gender')

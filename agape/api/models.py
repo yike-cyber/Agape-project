@@ -55,6 +55,7 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
     
     
+    
     username = None
     USERNAME_FIELD = 'email'
     

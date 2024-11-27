@@ -135,6 +135,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.User'
 
 
+
 ALLOWED_HOSTS = ['.vercel.app','127.0.0.1', 'localhost', ]
 
 CORS_ALLOW_ALL_ORIGINS = True 
