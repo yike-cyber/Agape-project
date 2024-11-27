@@ -1,6 +1,7 @@
 from django.contrib.auth import login, logout, authenticate
 from django.template.loader import render_to_string
 from django.db.models import Q
+from django.http import HttpResponse
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics, permissions
