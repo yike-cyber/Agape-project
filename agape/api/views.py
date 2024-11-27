@@ -9,8 +9,6 @@ from rest_framework.exceptions import NotFound
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import status
-from django.core.exceptions import ObjectDoesNotExist
-
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -132,45 +130,42 @@ class LoginView(APIView):
         error_response["errors"] = serializer.errors
         return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
     
-
-class SetNewPasswordView(APIView):
-    permission_classes = [AllowAny]  # Allow any user to access the view
-
+class ResetPasswordView(APIView):
     def post(self, request):
-        # Prepare success and error response templates
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
         # Validate input data
-        serializer = SetNewPasswordSerializer(data=request.data)
+        serializer = ResetPasswordSerializer(data=request.data)
         if serializer.is_valid():
-            email = request.data.get("email")
-
-            if not email:
-                error_response["message"] = "Email is required."
-                error_response["error_code"] = "missing_email"
-                return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
-
+            email = serializer.validated_data['email']
             try:
                 user = User.objects.get(email=email)
-
-            except ObjectDoesNotExist:
-                error_response["message"] = "User with the provided email does not exist."
-                error_response["error_code"] = "user_not_found"
+            except User.DoesNotExist:
+                error_response["message"] = "Email not found."
+                error_response["error_code"] = "email_not_found"
                 return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-            new_password = serializer.validated_data['password']
-            user.set_password(new_password)
-            user.save()
+            otp = str(random.randint(100000, 999999))  # 6-digit OTP
 
-            success_response["message"] = "Password updated successfully."
+            cache.set(f"reset_password_otp_{email}", otp, timeout=300)
+
+            send_email(
+                'Password Reset OTP',
+                f'Your password reset OTP is: {otp} It will expire after 5 minutes.',
+                [email]
+            )
+            print('OTP sent successfully!')
+
+            # Prepare success response
+            success_response["message"] = "OTP sent to your email."
             return Response(success_response, status=status.HTTP_200_OK)
 
-        # If serializer is invalid, return the error response
+        # Invalid data from serializer
         error_response["message"] = "Invalid data provided."
-        error_response["error_code"] = "invalid_data"
         error_response["errors"] = serializer.errors
-        return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
+        return Response(error_response, status=status.HTTP_400_BAD_REQUEST)  
+
 
 
 class VerifyOTPView(APIView):
@@ -207,9 +202,8 @@ class VerifyOTPView(APIView):
             error_response["error_code"] = "invalid_otp"
             return Response(error_response, status=status.HTTP_400_BAD_REQUEST)    
 
-
 class SetNewPasswordView(APIView):
-    permission_classes = [AllowAny]  # Ensure only authenticated users can access this view
+    permission_classes = [AllowAny]  
 
     def post(self, request):
         # Prepare success and error response templates
@@ -219,31 +213,21 @@ class SetNewPasswordView(APIView):
         # Validate input data
         serializer = SetNewPasswordSerializer(data=request.data)
         if serializer.is_valid():
-            # Get the access token from the request headers
-            access_token = request.headers.get('Authorization', '').split(' ')[-1]
+            # Get the email from the request data
+            email = request.data.get("email")
 
-            if not access_token:
-                error_response["message"] = "Access token is missing."
-                error_response["error_code"] = "missing_token"
+            if not email:
+                error_response["message"] = "Email is required."
+                error_response["error_code"] = "missing_email"
                 return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
             try:
-                # Decode and validate the access token
-                decoded_token = AccessToken(access_token)  # This will decode and validate the token
+                user = User.objects.get(email=email)
 
-                # Get the user ID from the decoded token
-                user_id = decoded_token['user_id']  # This is a UUID string
-
-                # Convert user_id to UUID type and ensure it's valid
-                user_id = UUID(user_id)  # Ensure we are using the UUID type to query
-
-                # Get the user object using the extracted user ID
-                user = User.objects.get(id=user_id)
-                
-            except (ValueError, TypeError, ObjectDoesNotExist) as e:
-                error_response["message"] = "Invalid or expired token."
-                error_response["error_code"] = "invalid_token"
-                return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
+            except ObjectDoesNotExist:
+                error_response["message"] = "User with the provided email does not exist."
+                error_response["error_code"] = "user_not_found"
+                return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
             # Set the new password
             new_password = serializer.validated_data['password']
@@ -258,8 +242,6 @@ class SetNewPasswordView(APIView):
         error_response["error_code"] = "invalid_data"
         error_response["errors"] = serializer.errors
         return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
-    
-
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
