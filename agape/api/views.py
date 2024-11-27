@@ -202,42 +202,38 @@ class VerifyOTPView(APIView):
             error_response["error_code"] = "invalid_otp"
             return Response(error_response, status=status.HTTP_400_BAD_REQUEST)    
 
+
 class SetNewPasswordView(APIView):
-    permission_classes = [AllowAny]  
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        # Prepare success and error response templates
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
-        # Validate input data
+        # Deserialize request data with the SetNewPasswordSerializer
         serializer = SetNewPasswordSerializer(data=request.data)
-        if serializer.is_valid():
-            # Get the email from the request data
-            email = request.data.get("email")
 
-            if not email:
-                error_response["message"] = "Email is required."
-                error_response["error_code"] = "missing_email"
-                return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
+        if serializer.is_valid():
+            email = serializer.validated_data.get("email")
+            new_password = serializer.validated_data.get("password")
 
             try:
+                # Fetch the user based on the provided email
                 user = User.objects.get(email=email)
+                
+                # Set the new password
+                user.set_password(new_password)
+                user.save()
 
-            except ObjectDoesNotExist:
+                success_response["message"] = "Password updated successfully."
+                return Response(success_response, status=status.HTTP_200_OK)
+
+            except User.DoesNotExist:
                 error_response["message"] = "User with the provided email does not exist."
                 error_response["error_code"] = "user_not_found"
                 return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-            # Set the new password
-            new_password = serializer.validated_data['password']
-            user.set_password(new_password)
-            user.save()
-
-            success_response["message"] = "Password updated successfully."
-            return Response(success_response, status=status.HTTP_200_OK)
-
-        # If serializer is invalid, return the error response
+        # If serializer is invalid, return error response with validation errors
         error_response["message"] = "Invalid data provided."
         error_response["error_code"] = "invalid_data"
         error_response["errors"] = serializer.errors

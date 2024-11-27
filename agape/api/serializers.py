@@ -100,22 +100,20 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("Email not found"))
         return value
 
+
 class SetNewPasswordSerializer(serializers.Serializer):
-    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-    password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
 
-    def validate(self, attrs):
-        password = attrs.get('password')
-        password2 = attrs.get('password2')
+    def validate_password2(self, value):
+        password = self.initial_data.get('password')
+        if value != password:
+            raise serializers.ValidationError("Passwords do not match.")
+        return value
 
-        # Ensure passwords match
-        if password != password2:
-            raise serializers.ValidationError(_("Passwords don't match."))
-
-        # Call custom validate_password function from utils.py
-        try:
-            validate_password(password)
-        except ValidationError as e:
-            raise serializers.ValidationError({'password': e.messages})
-
-        return attrs
+    def validate_email(self, value):
+        # Check if user exists with the provided email
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email does not exist.")
+        return value
