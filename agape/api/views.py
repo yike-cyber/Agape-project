@@ -589,27 +589,24 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         """
         Optionally filter the queryset based on the search parameter.
         """
-        queryset = self.queryset.filter(deleted=False)  # Exclude deleted records
+        queryset = self.queryset.filter(deleted=False)  
         search_term = self.request.query_params.get('search', None)
 
         if search_term:
             filters = Q(
                 Q(record_id__icontains=search_term) |
-                Q(disability_type__icontains=search_term) |
-                Q(person_name__icontains=search_term) |
-                Q(remarks__icontains=search_term) |
                 Q(gender__icontains=search_term) |
+                Q(phone_number__icontains=search_term) |
                 Q(region__icontains=search_term) |
-                Q(wheelchair_type__icontains=search_term) |
                 Q(first_name__icontains=search_term) |
                 Q(middle_name__icontains=search_term) |
                 Q(last_name__icontains=search_term) |
                 Q(city__icontains=search_term) |
                 Q(zone__icontains=search_term) |
                 Q(woreda__icontains=search_term) |
-                Q(seat_width__icontains=search_term) |
+                Q(hip_width__icontains=search_term) |
                 Q(backrest_height__icontains=search_term) |
-                Q(seat_depth__icontains=search_term)
+                Q(thigh_length__icontains=search_term)
             )
             queryset = queryset.filter(filters)
 
@@ -644,13 +641,9 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         return paginator.get_paginated_response(success_response)
 
     def create(self, request, *args, **kwargs):
-        """
-        Handle creating a new disability record.
-        """
         serializer = self.get_serializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-
         success_response = SUCCESS_RESPONSE.copy()
         success_response["message"] = "Disability record created successfully."
         success_response["data"] = serializer.data
@@ -658,12 +651,10 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         return Response(success_response, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
-        """
-        Save the disability record to the database.
-        """
         serializer.save()
+        
+        
 # Retrieve, Update, and Delete Disability Record
-
 class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DisabilityRecord.objects.all()
     serializer_class = DisabilityRecordSerializer

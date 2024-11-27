@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import mark_safe
-from .models import User, Warrant, DisabilityRecord
+from .models import User, Warrant, DisabilityRecord,Equipment
 from django.conf import settings
 
 class CustomUserAdmin(UserAdmin):

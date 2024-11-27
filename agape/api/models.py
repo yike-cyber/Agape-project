@@ -82,13 +82,64 @@ class Warrant(models.Model):
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100,blank=True,null=True)
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     phone_number = models.CharField(max_length=15,null=True, unique=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     id_image = models.ImageField(upload_to='warrant_id_images/',null=True,blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+    
+    
+    
+# Equipment choices
+EQUIPMENT_CHOICES = [
+    ('Pediatric_wheelchair', 'Pediatric wheelchair'),
+    ('American_wheelchair', 'American wheelchair'),
+    ('FWP_wheelchair', 'FWP wheelchair'),
+    ('Walker', 'Walker'),
+    ('Crutch', 'Crutch'),
+    ('Cane', 'Cane')
+]
 
+
+# Cause of Need (Kind of Disability) choices
+CAUSE_OF_NEED_CHOICES = [
+    ('Cerebral_Palsy', 'Cerebral Palsy'),
+    ('Muscular_Dystrophy', 'Muscular Dystrophy'),
+    ('Stroke', 'Stroke'),
+    ('Epilepsy', 'Epilepsy'),
+    ('Multiple_Sclerosis', 'Multiple Sclerosis'),
+    ('Multiple_Disabilities', 'Multiple Disabilities'),
+    ('Spina_Bifida', 'Spina Bifida'),
+    ('Burn_Injury', 'Burn Injury'),
+    ('Downs_Syndrome', "Down's Syndrome"),
+    ('Spinal_Injury', 'Spinal Injury'),
+    ('Brain_and_Head_Injuries', 'Brain and Head Injuries'),
+    ('Amputee', 'Amputee'),
+    ('Polio', 'Polio'),
+    ('Arthritis', 'Arthritis'),
+]
+
+#size of equipement
+SIZE_OF_EQUIPMENT=[
+    ('small','Small'),
+    ('medium','Medium'),
+    ('large','Large'),
+    ('xl','XL'),
+]
+
+
+class Equipment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    equipment_type = models.CharField(max_length=100, choices=EQUIPMENT_CHOICES)
+    size = models.CharField(max_length=50, choices=SIZE_OF_EQUIPMENT, null=True,blank=True)  
+    cause_of_need = models.CharField(max_length=100, choices=CAUSE_OF_NEED_CHOICES, null=True, blank=True) 
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.equipment_type.replace('_', ' ')} - {self.size if self.size else 'Unknown Size'}"
 
 class DisabilityRecord(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -96,24 +147,27 @@ class DisabilityRecord(models.Model):
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    phone_number = models.CharField(max_length=15,null=True, unique=True)
     date_of_birth = models.DateField()
-    region = models.CharField(max_length=100,null=True,blank=True)
-    zone = models.CharField(max_length=100,null=True,blank=True)
-    city = models.CharField(max_length=100,null=True,blank=True)
-    woreda = models.CharField(max_length=100,null=True,blank=True)
-    recorder = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,related_name='recordor')
+    phone_number = models.CharField(max_length=15, null=True, unique=True)
+    region = models.CharField(max_length=100, null=True, blank=True)
+    zone = models.CharField(max_length=100, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    woreda = models.CharField(max_length=100, null=True, blank=True)
+    recorder = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recordor')
     warrant = models.ForeignKey(Warrant, on_delete=models.SET_NULL, null=True, blank=True, related_name='disability_records')
-    seat_width = models.FloatField()
+    equipment = models.ForeignKey(Equipment, on_delete=models.SET_NULL, null=True, blank=True)
+
+    hip_width = models.FloatField()
     backrest_height = models.FloatField()
-    seat_depth= models.FloatField()
-    profile_image = models.ImageField(upload_to='disability_profile_images/',default='default_profile_image/avatar.png',blank=True)
-    kebele_id_image = models.ImageField(upload_to='disability_kebele_id_images/',null=True,blank=True)
-    wheelchair_type = models.CharField(max_length=100)
+    thigh_length = models.FloatField()
+
+    profile_image = models.ImageField(upload_to='disability_profile_images/', default='default_profile_image/avatar.png', blank=True)
+    kebele_id_image = models.ImageField(upload_to='disability_kebele_id_images/', null=True, blank=True)
+
     is_provided = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} - {self.wheelchair_type}"
+        return f"{self.first_name} {self.last_name} - {self.equipment.equipment_type if self.equipment else 'No Equipment'}"
