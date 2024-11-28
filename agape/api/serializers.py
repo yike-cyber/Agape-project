@@ -23,7 +23,8 @@ class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Equipment
         fields = ['id', 'equipment_type', 'size','cause_of_need', 'created_at', 'updated_at']
-
+     
+  
 class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
     warrant = WarrantSerializer() 
@@ -35,9 +36,9 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
             'id', 'first_name', 'middle_name', 'last_name', 'gender', 
             'phone_number', 'date_of_birth', 'region', 'zone', 'city', 
             'woreda', 'recorder', 'warrant', 'equipment', 
-            'seat_width', 'backrest_height', 'seat_depth', 
+            'hip_width', 'backrest_height', 'thigh_length', 
             'profile_image', 'kebele_id_image', 'is_provided', 
-            'deleted', 'created_at', 'updated_at'
+            'deleted', 'is_active','created_at', 'updated_at'
         ]
 
     def create(self, validated_data):

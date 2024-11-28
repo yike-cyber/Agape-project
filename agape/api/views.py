@@ -26,6 +26,7 @@ from .models import User,Warrant,DisabilityRecord
 from .serializers import UserSerializer,WarrantSerializer,DisabilityRecordSerializer, RegisterSerializer, LoginSerializer, ResetPasswordSerializer, SetNewPasswordSerializer
 from .utils import send_email
 from .constants import SUCCESS_RESPONSE, ERROR_RESPONSE
+from .pagination import CustomPagination
 
 
 class RegisterView(APIView):
@@ -146,7 +147,7 @@ class ResetPasswordView(APIView):
                 error_response["error_code"] = "email_not_found"
                 return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-            otp = str(random.randint(100000, 999999))  # 6-digit OTP
+            otp = str(random.randint(100000, 999999))  
 
             cache.set(f"reset_password_otp_{email}", otp, timeout=300)
 
@@ -277,15 +278,17 @@ class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = self.queryset
-
+        queryset = self.queryset.filter(deleted=False)
+        print('self request role',self.request.user.role)
         search_term = self.request.query_params.get('search', None)
         print('search term',search_term)
         if search_term:
             filters = Q(
                 Q(email__icontains=search_term) |
+                Q(gender__icontains=search_term) |
                 Q(first_name__icontains=search_term) |
                 Q(middle_name__icontains=search_term) |
                 Q(last_name__icontains=search_term) |
@@ -298,57 +301,68 @@ class UserListCreateView(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        paginator = PageNumberPagination()
+        paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
         # Checking if the paginated queryset is empty
-        if not paginated_queryset:
+        if not paginated_queryset and not queryset.exists():
             response = ERROR_RESPONSE.copy()
             response.update({
-                "message": "No users found matching the search criteria.",
+                "message": "No users found matching found.",
                 "error_code": "USER_NOT_FOUND"
             })
             return Response(response, status=status.HTTP_404_NOT_FOUND)
+        elif paginated_queryset is not None:
+            serializer = self.get_serializer(paginated_queryset, many=True)
 
-        # Serialize the paginated data
-        serializer = self.get_serializer(paginated_queryset, many=True)
-
-        # Build the successful response
-        response = SUCCESS_RESPONSE.copy()
-        response.update({
-            "message": "Users fetched successfully.",
-            "data": serializer.data,
-            "pagination": {
-                "count": paginator.page.paginator.count,
-                "next": paginator.get_next_link(),
-                "previous": paginator.get_previous_link()
-            }
-        })
-
-        # Return paginated response
-        return paginator.get_paginated_response(response)
-
-    def create(self, request, *args, **kwargs):
-        # Handling user creation
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
             response = SUCCESS_RESPONSE.copy()
             response.update({
-                "message": "User created successfully.",
-                "data": serializer.data
+                "message": "Users fetched successfully.",
+                "data": serializer.data,
+                "pagination": {
+                    "count": paginator.page.paginator.count,
+                    "next": paginator.get_next_link(),
+                    "previous": paginator.get_previous_link()
+                }
             })
-            return Response(response, status=status.HTTP_201_CREATED)
+            return paginator.get_paginated_response(response)
+    
+        else:
+            serializer = self.get_serializer(queryset,many=True)
+            return Response({
+                "message":"Users fetched successfully",
+                "data":serializer.data
+            },status = status.HTTP_200_OK)
+            
 
-        # Return validation errors if the creation failed
-        response = ERROR_RESPONSE.copy()
-        response.update({
-            "message": "User creation failed.",
-            "error_code": "VALIDATION_ERROR",
-            "errors": serializer.errors
-        })
-        return Response(response, status=status.HTTP_400_BAD_REQUEST)
+    def create(self, request, *args, **kwargs):
+        if request.user.role =='admin':
+            # Handling user creation
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                response = SUCCESS_RESPONSE.copy()
+                response.update({
+                    "message": "User created successfully.",
+                    "data": serializer.data
+                })
+                return Response(response, status=status.HTTP_201_CREATED)
 
+            # Return validation errors if the creation failed
+            response = ERROR_RESPONSE.copy()
+            response.update({
+                "message": "User creation failed.",
+                "error_code": "VALIDATION_ERROR",
+                "errors": serializer.errors
+            })
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                "error_code":"FORBIDDEN",
+                "message":"Only admin can register user."
+            }, 
+            status = status.HTTP_403_FORBIDDEN
+             )
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
@@ -400,6 +414,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 class UserFilterView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
 
     def get_queryset(self):
         query = self.request.query_params.get('search', '')
@@ -449,15 +464,16 @@ class UserFilterView(generics.ListAPIView):
         return paginator.get_paginated_response(success_response)
     
 # List of warrents
-
 class WarrantListCreateView(generics.ListCreateAPIView):
     queryset = Warrant.objects.all()
     serializer_class = WarrantSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = self.queryset.fileter(deleted=False)
         search_term = self.request.query_params.get('search', None)
+
         if search_term:
             filters = Q(
                 Q(gender__icontains=search_term) |
@@ -468,36 +484,48 @@ class WarrantListCreateView(generics.ListCreateAPIView):
             )
             queryset = queryset.filter(filters)
 
-        return queryset
+        return queryset.order_by('-first_name')  
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        print('queryset,',queryset)
-        paginator = PageNumberPagination()
+        paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        if not paginated_queryset:
-            response = ERROR_RESPONSE.copy()
-            response.update({
-                "message": "No warrants found matching the search criteria.",
-                "error_code": "WARRANT_NOT_FOUND"
-            })
-            return Response(response, status=status.HTTP_404_NOT_FOUND)
+        if paginated_queryset is None and not queryset.exists():
+            return Response(
+                {
+                    "status": "error",
+                    "message": "No warrants found matching the search criteria.",
+                    "error_code": "WARRANT_NOT_FOUND",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        serializer = self.get_serializer(paginated_queryset, many=True)
+        if paginated_queryset is not None:
+            serializer = self.get_serializer(paginated_queryset, many=True)
+            return paginator.get_paginated_response(
+                {
+                    "status": "success",
+                    "message": "Warrants fetched successfully.",
+                    "data": serializer.data,
+                    "pagination": {
+                        "count": paginator.page.paginator.count,
+                        "next": paginator.get_next_link(),
+                        "previous": paginator.get_previous_link(),
+                    },
+                }
+            )
 
-        success_response = SUCCESS_RESPONSE.copy()
-        success_response.update({
-            "message": "Warrants fetched successfully.",
-            "data": serializer.data,
-            "pagination": {
-                "count": paginator.page.paginator.count,
-                "next": paginator.get_next_link(),
-                "previous": paginator.get_previous_link()
-            }
-        })
-        return paginator.get_paginated_response(success_response)
-
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(
+            {
+                "status": "success",
+                "message": "Warrants fetched successfully.",
+                "data": serializer.data,
+                "pagination": None,
+            },
+            status=status.HTTP_200_OK,
+        )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -518,7 +546,6 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def retrieve(self, request, *args, **kwargs):
-        
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
@@ -562,7 +589,7 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            instance.deleted = True  # Assuming a `deleted` flag for soft delete
+            instance.deleted = True  
             instance.save()
 
             success_response = SUCCESS_RESPONSE.copy()
@@ -584,17 +611,14 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
     queryset = DisabilityRecord.objects.all()
     serializer_class = DisabilityRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
-        """
-        Optionally filter the queryset based on the search parameter.
-        """
-        queryset = self.queryset.filter(deleted=False)  
+        queryset = self.queryset.filter(deleted=False)
         search_term = self.request.query_params.get('search', None)
 
         if search_term:
             filters = Q(
-                Q(record_id__icontains=search_term) |
                 Q(gender__icontains=search_term) |
                 Q(phone_number__icontains=search_term) |
                 Q(region__icontains=search_term) |
@@ -613,22 +637,27 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs):
-        """
-        Handle listing disability records with pagination.
-        """
         queryset = self.get_queryset()
-        paginator = PageNumberPagination()
+        paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        if not paginated_queryset:
-            error_response = ERROR_RESPONSE.copy()
-            error_response["message"] = "No disability records found matching the search criteria."
-            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
+        if paginated_queryset is None:
+            serializer = self.get_serializer(queryset, many=True)
+            success_response = {
+                "status": "success",
+                "message": "Disability records fetched successfully.",
+                "data": serializer.data,
+                "pagination": {
+                    "count": len(queryset),
+                    "next": None,
+                    "previous": None
+                }
+            }
+            return Response(success_response, status=status.HTTP_200_OK)
 
         serializer = self.get_serializer(paginated_queryset, many=True)
-
-        success_response = SUCCESS_RESPONSE.copy()
-        success_response.update({
+        success_response = {
+            "status": "success",
             "message": "Disability records fetched successfully.",
             "data": serializer.data,
             "pagination": {
@@ -636,8 +665,7 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
                 "next": paginator.get_next_link(),
                 "previous": paginator.get_previous_link()
             }
-        })
-
+        }
         return paginator.get_paginated_response(success_response)
 
     def create(self, request, *args, **kwargs):

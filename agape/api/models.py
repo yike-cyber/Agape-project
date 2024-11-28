@@ -51,10 +51,10 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=15,null=True, unique=True)
     profile_image = models.ImageField(upload_to='user_profile_images/',default='default_profile_image/avatar.png', blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES,default='field_worker')
+    is_active = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    
     
     username = None
     USERNAME_FIELD = 'email'
@@ -62,6 +62,8 @@ class User(AbstractUser):
     objects = CustomUserManager()
     
     REQUIRED_FIELDS =['first_name','last_name']
+    class Meta:
+        ordering =['-created_at','first_name']
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"
@@ -85,55 +87,18 @@ class Warrant(models.Model):
     phone_number = models.CharField(max_length=15,null=True, unique=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     id_image = models.ImageField(upload_to='warrant_id_images/',null=True,blank=True)
+    deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
     
-    
-    
-# Equipment choices
-EQUIPMENT_CHOICES = [
-    ('Pediatric_wheelchair', 'Pediatric wheelchair'),
-    ('American_wheelchair', 'American wheelchair'),
-    ('FWP_wheelchair', 'FWP wheelchair'),
-    ('Walker', 'Walker'),
-    ('Crutch', 'Crutch'),
-    ('Cane', 'Cane')
-]
-
-
-# Cause of Need (Kind of Disability) choices
-CAUSE_OF_NEED_CHOICES = [
-    ('Cerebral_Palsy', 'Cerebral Palsy'),
-    ('Muscular_Dystrophy', 'Muscular Dystrophy'),
-    ('Stroke', 'Stroke'),
-    ('Epilepsy', 'Epilepsy'),
-    ('Multiple_Sclerosis', 'Multiple Sclerosis'),
-    ('Multiple_Disabilities', 'Multiple Disabilities'),
-    ('Spina_Bifida', 'Spina Bifida'),
-    ('Burn_Injury', 'Burn Injury'),
-    ('Downs_Syndrome', "Down's Syndrome"),
-    ('Spinal_Injury', 'Spinal Injury'),
-    ('Brain_and_Head_Injuries', 'Brain and Head Injuries'),
-    ('Amputee', 'Amputee'),
-    ('Polio', 'Polio'),
-    ('Arthritis', 'Arthritis'),
-]
-
-#size of equipement
-SIZE_OF_EQUIPMENT=[
-    ('small','Small'),
-    ('medium','Medium'),
-    ('large','Large'),
-    ('xl','XL'),
-]
 
 
 class Equipment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    equipment_type = models.CharField(max_length=100, choices=EQUIPMENT_CHOICES)
-    size = models.CharField(max_length=50, choices=SIZE_OF_EQUIPMENT, null=True,blank=True)  
-    cause_of_need = models.CharField(max_length=100, choices=CAUSE_OF_NEED_CHOICES, null=True, blank=True) 
+    equipment_type = models.CharField(max_length=100,blank=True,null=True)
+    size = models.CharField(max_length=50, null=True,blank=True)  
+    cause_of_need = models.CharField(max_length=100, null=True, blank=True) 
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -146,7 +111,7 @@ class DisabilityRecord(models.Model):
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES,blank=True,null=True)
     date_of_birth = models.DateField()
     phone_number = models.CharField(max_length=15, null=True, unique=True)
     region = models.CharField(max_length=100, null=True, blank=True)
@@ -167,7 +132,14 @@ class DisabilityRecord(models.Model):
     is_provided = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
     deleted = models.BooleanField(default=False)
-
+    
+    class Meta:
+        ordering=['-created_at']
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.equipment.equipment_type if self.equipment else 'No Equipment'}"
+
+    @property
+    def get_full_name(self):
+        return f"{self.first_name} {self.middle_name} {self.last_name}"
