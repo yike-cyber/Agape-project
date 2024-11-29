@@ -62,27 +62,13 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         return disability_record
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'middle_name', 'last_name', 'gender', 'phone_number', 'profile_image', 'role', 'password']
-
-    def validate(self, attrs):
-        password = attrs.get('password')
-
-       
-
-        # Validate password strength
-        try:
-            validate_password(password)
-        except Exception as e:
-            raise serializers.ValidationError({'password': e.messages})
-
-        return attrs
+        fields = ['email', 'first_name', 'middle_name', 'last_name', 'gender', 'phone_number', 'profile_image', 'role']
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data['first_name'].append('123').lower()
         profile_image = validated_data.pop('profile_image',None)
         user = User.objects.create(**validated_data)
         user.set_password(password)
