@@ -33,7 +33,7 @@ class RegisterView(APIView):
     permission_classes = [IsAuthenticated] 
 
     def post(self, request):
-        if not request.user.is_superuser and request.user.role != 'admin':
+        if not request.user.is_authenticated or request.user.role != 'admin':
             response_data = ERROR_RESPONSE.copy()
             response_data["message"] = "You are not authorized to create users."
             response_data["error_code"] = 403
