@@ -68,7 +68,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ['email', 'first_name', 'middle_name', 'last_name', 'gender', 'phone_number', 'profile_image', 'role']
 
     def create(self, validated_data):
-        password = validated_data['first_name'].append('123').lower()
+        password = validated_data['first_name']
         profile_image = validated_data.pop('profile_image',None)
         user = User.objects.create(**validated_data)
         user.set_password(password)
