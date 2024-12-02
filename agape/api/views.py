@@ -103,7 +103,6 @@ class VerifyEmailView(APIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
-
     def post(self, request):
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
@@ -219,10 +218,7 @@ class SetNewPasswordView(APIView):
             new_password = serializer.validated_data.get("password")
 
             try:
-                # Fetch the user based on the provided email
                 user = User.objects.get(email=email)
-                
-                # Set the new password
                 user.set_password(new_password)
                 user.save()
 
@@ -234,7 +230,6 @@ class SetNewPasswordView(APIView):
                 error_response["error_code"] = "user_not_found"
                 return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        # If serializer is invalid, return error response with validation errors
         error_response["message"] = "Invalid data provided."
         error_response["error_code"] = "invalid_data"
         error_response["errors"] = serializer.errors
@@ -244,28 +239,22 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # Prepare success and error response templates
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
         try:
-            # Retrieve all outstanding tokens for the current user
             tokens = OutstandingToken.objects.filter(user_id=request.user.id)
-            
             if not tokens.exists():
                 error_response["message"] = "No active sessions found."
                 error_response["error_code"] = "no_active_sessions"
                 return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
-            # Blacklist each token (create if not already blacklisted)
             for token in tokens:
                 BlacklistedToken.objects.get_or_create(token=token)
-
             success_response["message"] = "Logged out successfully."
             return Response(success_response, status=status.HTTP_205_RESET_CONTENT)
 
         except Exception as e:
-            # If an unexpected error occurs, return a general error response
             error_response["message"] = "An error occurred while logging out."
             error_response["error_code"] = "logout_error"
             error_response["errors"] = str(e)
@@ -280,9 +269,7 @@ class UserListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = self.queryset.filter(deleted=False,is_active=True)
-        print('self request role',self.request.user.role)
         search_term = self.request.query_params.get('search', None)
-        print('search term',search_term)
         if search_term:
             filters = Q(
                 Q(email__icontains=search_term) |
@@ -302,7 +289,6 @@ class UserListCreateView(generics.ListCreateAPIView):
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        # Checking if the paginated queryset is empty
         if not paginated_queryset and not queryset.exists():
             response = ERROR_RESPONSE.copy()
             response.update({
@@ -335,7 +321,6 @@ class UserListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         if request.user.role =='admin':
-            # Handling user creation
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
@@ -346,7 +331,6 @@ class UserListCreateView(generics.ListCreateAPIView):
                 })
                 return Response(response, status=status.HTTP_201_CREATED)
 
-            # Return validation errors if the creation failed
             response = ERROR_RESPONSE.copy()
             response.update({
                 "message": "User creation failed.",
@@ -373,7 +357,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         try:
             user = self.queryset.get(id=user_id)
             if not user.is_active and user.deleted == True:
-                raise NotFound(detail="User is deactivated and cannot be accessed.")
+                raise NotFound(detail="User is deactivated or deleted.")
             return user
         except User.DoesNotExist:
             raise NotFound(detail="User not found.")
@@ -383,10 +367,10 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         error_response = ERROR_RESPONSE.copy()
 
         user = self.get_object()
-        user.is_active = False  # Deactivate user
+        user.deleted = True  
         user.save()
 
-        success_response["message"] = "User deactivated successfully."
+        success_response["message"] = "User deleted successfully."
         return Response(success_response, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
@@ -407,6 +391,26 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
             error_response["errors"] = serializer.errors
             return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
+
+class DeleteUserPermanentlyView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    lookup_field = 'id'
+
+    def get_object(self):
+        try:
+           user = self.get_queryset().get(id = self.kwargs[self.lookup_field])
+           return user
+        except User.DoesNotExist:
+            raise NotFound(detail = 'user not found')
+    
+    def delete(self,request,*args,**kwargs):
+        user = self.get_object()
+        user.delete()
+        return Response({
+            "message":"user deleted Permanently." },
+             status=status.HTTP_204_NO_CONTENT)
 
 # for filtering users
 class UserFilterView(generics.ListAPIView):
@@ -604,7 +608,6 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
 # List and Create Disability Records
-
 class DisabilityRecordListCreateView(generics.ListCreateAPIView):
     queryset = DisabilityRecord.objects.all()
     serializer_class = DisabilityRecordSerializer

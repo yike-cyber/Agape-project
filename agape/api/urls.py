@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     RegisterView, VerifyEmailView,VerifyOTPView, LoginView, ResetPasswordView,
     SetNewPasswordView, LogoutView,
-     UserListCreateView, UserDetailView, UserFilterView,
+     UserListCreateView, UserDetailView, UserFilterView,DeleteUserPermanentlyView,
     WarrantListCreateView, WarrantDetailView,
     DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView
     
@@ -21,16 +21,14 @@ urlpatterns = [
     path('auth/set-new-password/', SetNewPasswordView.as_view(), name='set-new-password'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     
-       # User Endpoints
     path('users/', UserListCreateView.as_view(), name='user-list-create'),
     path('users/<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/<uuid:id>/delete/', DeleteUserPermanentlyView.as_view(), name='delete-user'),
     path('users/filter/', UserFilterView.as_view(), name='user-filter'),
     
-    # Warrant Endpoints
     path('warrants/', WarrantListCreateView.as_view(), name='warrant-list-create'),
     path('warrants/<uuid:id>/', WarrantDetailView.as_view(), name='warrant-detail'),
     
-    # DisabilityRecord Endpoints
     path('disability-records/', DisabilityRecordListCreateView.as_view(), name='disability-record-list-create'),
     path('disability-records/<uuid:id>/', DisabilityRecordDetailView.as_view(), name='disability-record-detail'),
     path('disability-records/filter/', DisabilityRecordListFilterView.as_view(), name='disability-record-filter'),
