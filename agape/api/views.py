@@ -272,8 +272,6 @@ class LogoutView(APIView):
             return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-
 class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -281,7 +279,7 @@ class UserListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = self.queryset.filter(deleted=False)
+        queryset = self.queryset.filter(deleted=False,is_active=True)
         print('self request role',self.request.user.role)
         search_term = self.request.query_params.get('search', None)
         print('search term',search_term)
@@ -374,7 +372,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         user_id = self.kwargs.get(self.lookup_field)
         try:
             user = self.queryset.get(id=user_id)
-            if not user.is_active:
+            if not user.is_active and user.deleted == True:
                 raise NotFound(detail="User is deactivated and cannot be accessed.")
             return user
         except User.DoesNotExist:
