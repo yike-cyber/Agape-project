@@ -6,7 +6,7 @@ from django.conf import settings
 
 class CustomUserAdmin(UserAdmin):
     model = User
-    list_display = ['first_name', 'last_name', 'email', 'role', 'profile_image_display', 'is_staff']
+    list_display = ['first_name', 'last_name', 'email', 'role', 'profile_image_display', 'is_active','deleted']
     search_fields = ['first_name', 'last_name', 'email', 'phone_number']
     ordering = ['first_name']
 
