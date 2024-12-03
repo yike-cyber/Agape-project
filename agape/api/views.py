@@ -687,8 +687,8 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print("An error occurred:", str(e))  
-            return Response({"error": "An unexpected error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)urn Response(success_response, status=status.HTTP_201_CREATED)
+            print("An error occurred:", str(e))  # Log the error for debugging
+            return Response({"error": "errors,{str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
         serializer.save()
