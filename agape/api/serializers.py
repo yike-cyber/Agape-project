@@ -24,58 +24,59 @@ class EquipmentSerializer(serializers.ModelSerializer):
         model = Equipment
         fields = ['id', 'equipment_type', 'size','cause_of_need', 'created_at', 'updated_at']
      
-  
 class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
-    warrant = WarrantSerializer() 
-    equipment = EquipmentSerializer()  
+    warrant = WarrantSerializer()  # Nested serializer for Warrant
+    equipment = EquipmentSerializer()  # Nested serializer for Equipment
 
     class Meta:
         model = DisabilityRecord
         fields = [
-            'id', 'first_name', 'middle_name', 'last_name', 'gender', 
-            'phone_number', 'date_of_birth', 'region', 'zone', 'city', 
-            'woreda', 'recorder', 'warrant', 'equipment', 
-            'hip_width', 'backrest_height', 'thigh_length', 
-            'profile_image', 'kebele_id_image', 'is_provided', 
-            'deleted', 'is_active','created_at', 'updated_at'
+            'id', 'first_name', 'middle_name', 'last_name', 'gender',
+            'phone_number', 'date_of_birth', 'region', 'zone', 'city',
+            'woreda', 'recorder', 'warrant', 'equipment',
+            'hip_width', 'backrest_height', 'thigh_length',
+            'profile_image', 'kebele_id_image', 'is_provided',
+            'deleted', 'is_active', 'created_at', 'updated_at'
         ]
 
-def create(self, validated_data):
-    print('validated data', validated_data)
+    def create(self, validated_data):
+        try:
+            warrant_data = validated_data.pop('warrant', None)
+            equipment_data = validated_data.pop('equipment', None)
 
-    # Pop nested data
-    warrant_data = validated_data.pop('warrant', None)
-    equipment_data = validated_data.pop('equipment', None)
+            disability_record = DisabilityRecord.objects.create(
+                **validated_data
+            )
 
-    # Create the DisabilityRecord instance
-    disability_record = DisabilityRecord.objects.create(
-        **validated_data,
-        recorder=self.context['request'].user
-    )
+            profile_image = validated_data.get('profile_image')
+            kebele_id_image = validated_data.get('kebele_id_image')
 
-    # Handle image uploads
-    profile_image = validated_data.get('profile_image')
-    kebele_id_image = validated_data.get('kebele_id_image')
+            if profile_image:
+                disability_record.profile_image.save(profile_image.name, profile_image, save=False)
+            if kebele_id_image:
+                disability_record.kebele_id_image.save(kebele_id_image.name, kebele_id_image, save=False)
 
-    if profile_image:
-        # Save the uploaded profile image
-        disability_record.profile_image.save(profile_image.name, profile_image, save=False)
+            if warrant_data:
+                warrant_serializer = WarrantSerializer(data=warrant_data)
+                warrant_serializer.is_valid(raise_exception=True)
+                warrant = warrant_serializer.save()
+                disability_record.warrant = warrant
 
-    if kebele_id_image:
-        # Save the uploaded kebele ID image
-        disability_record.kebele_id_image.save(kebele_id_image.name, kebele_id_image, save=False)
+            if equipment_data:
+                equipment_serializer = EquipmentSerializer(data=equipment_data)
+                equipment_serializer.is_valid(raise_exception=True)
+                equipment = equipment_serializer.save()
+                disability_record.equipment = equipment
 
-    if warrant_data:
-        warrant = Warrant.objects.create(**warrant_data)
-        disability_record.warrant = warrant
+            disability_record.save()
 
-    if equipment_data:
-        equipment = Equipment.objects.create(**equipment_data)
-        disability_record.equipment = equipment
+            return disability_record
 
-    disability_record.save()
-    return disability_record
+        except Exception as e:
+            print("Error in DisabilityRecord creation:", str(e))
+            raise serializers.ValidationError({"message": "An error occurred during creation."})
+
 
 class RegisterSerializer(serializers.ModelSerializer):
 

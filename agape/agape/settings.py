@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = False
+DEBUG = True
 
 
 # Application definition
@@ -33,16 +33,17 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     
-  'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+   'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
     ],
-  
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
-    ],
+   
 }
 
 

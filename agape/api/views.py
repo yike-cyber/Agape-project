@@ -1,5 +1,7 @@
 from django.contrib.auth import login, logout, authenticate
 from django.template.loader import render_to_string
+from django.core.exceptions import ValidationError
+
 from django.db.models import Q
 from django.http import HttpResponse
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -32,7 +34,9 @@ from .pagination import CustomPagination
 
 
 class RegisterView(APIView):
-    permission_classes = [IsAuthenticated] 
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    permission_classe = [IsAuthenticated]
 
     def post(self, request):
         if not request.user.is_authenticated or request.user.role != 'admin':
@@ -609,6 +613,7 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
 # List and Create Disability Records
+
 class DisabilityRecordListCreateView(generics.ListCreateAPIView):
     queryset = DisabilityRecord.objects.all()
     serializer_class = DisabilityRecordSerializer
@@ -674,26 +679,26 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         try:
             serializer = self.get_serializer(data=request.data, partial=True)
-            print('data coming', request.data)  # Debugging line to check incoming data
-            serializer.is_valid(raise_exception=True)  # Validate input data
-            self.perform_create(serializer)  # Save the record
+            print('Incoming data:', request.data) 
+            serializer.is_valid(raise_exception=True) 
+            self.perform_create(serializer)  
 
-            success_response = SUCCESS_RESPONSE.copy()
-            success_response["message"] = "Disability record created successfully."
-            success_response["data"] = serializer.data
+            success_response = {
+                "status": "success",
+                "message": "Disability record created successfully.",
+                "data": serializer.data
+            }
             
             return Response(success_response, status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print("An error occurred:", str(e))  # Log the error for debugging
-            return Response({"error": "errors,{str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Internal Server Error: " + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
-        serializer.save()
         
-        
+        serializer.save(recorder=self.request.user)        
 # Retrieve, Update, and Delete Disability Record
 class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DisabilityRecord.objects.all()
