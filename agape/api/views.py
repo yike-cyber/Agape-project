@@ -672,15 +672,23 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         return paginator.get_paginated_response(success_response)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data, partial=True)
-        print('data comming',request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        success_response = SUCCESS_RESPONSE.copy()
-        success_response["message"] = "Disability record created successfully."
-        success_response["data"] = serializer.data
-        
-        return Response(success_response, status=status.HTTP_201_CREATED)
+        try:
+            serializer = self.get_serializer(data=request.data, partial=True)
+            print('data coming', request.data)  # Debugging line to check incoming data
+            serializer.is_valid(raise_exception=True)  # Validate input data
+            self.perform_create(serializer)  # Save the record
+
+            success_response = SUCCESS_RESPONSE.copy()
+            success_response["message"] = "Disability record created successfully."
+            success_response["data"] = serializer.data
+            
+            return Response(success_response, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print("An error occurred:", str(e))  
+            return Response({"error": "An unexpected error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)urn Response(success_response, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         serializer.save()
