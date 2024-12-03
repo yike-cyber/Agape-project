@@ -12,13 +12,13 @@ def custom_page_not_found(request, exception):
         'error_code': 404
     }, status=404)
 
-# Custom 500 Internal Server Error Response
-def custom_server_error(request):
-    return JsonResponse({
-        'status': 'error',
-        'message': "An internal server error occurred. Please try again later.",
-        'error_code': 500
-    }, status=500)
+# # Custom 500 Internal Server Error Response
+# def custom_server_error(request):
+#     return JsonResponse({
+#         'status': 'error',
+#         'message': "An internal server error occurred. Please try again later.",
+#         'error_code': 500
+#     }, status=500)
 
 # Custom 400 Bad Request Response (for invalid or missing data)
 def custom_bad_request(request, exception):
