@@ -3,6 +3,9 @@
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 import os
 import environ
@@ -29,6 +32,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'cloudinary',
 ]
 
 REST_FRAMEWORK = {
@@ -156,3 +160,15 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 FRONTEND_URL = env('FRONTEND_URL')
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+
+CLOUDINARY_URL = env('CLOUDINARY_URL')
+print('url',CLOUDINARY_URL)
+cloudinary.config(
+    cloudinary_url=CLOUDINARY_URL
+)
+
+
+

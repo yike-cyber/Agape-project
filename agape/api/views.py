@@ -32,11 +32,8 @@ from .utils import send_email
 from .constants import SUCCESS_RESPONSE, ERROR_RESPONSE
 from .pagination import CustomPagination
 
-
 class RegisterView(APIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
-    permission_classe = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         if not request.user.is_authenticated or request.user.role != 'admin':
@@ -48,11 +45,9 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(str(user.pk).encode())
-
-            current_domain = request.get_host()  
+            current_domain = request.get_host()
             verification_link = f'http://{current_domain}/api/auth/email-verify/?uid={uid}&token={token}'
 
             subject = 'Email Verification for Agape'
@@ -68,6 +63,7 @@ class RegisterView(APIView):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "role": user.role,
+                "profile_image_url": user.profile_image.url if user.profile_image else None,
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -76,6 +72,7 @@ class RegisterView(APIView):
         response_data["error_code"] = 400
         response_data["errors"] = serializer.errors
         return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
 
 class VerifyEmailView(APIView):
     def get(self, request):

@@ -1,8 +1,23 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 import uuid
+from cloudinary.models import CloudinaryField
 from django.utils.safestring import mark_safe
-from django.contrib.auth.models import BaseUserManager
+from django.conf import settings
+
+
+# Gender Choices
+GENDER_CHOICES = [
+    ('male', 'Male'),
+    ('female', 'Female'),
+]
+
+# Role Choices
+ROLE_CHOICES = [
+    ('admin', 'Admin'),
+    ('field_worker', 'Field Worker'),
+]
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -29,75 +44,69 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-# Gender Choices
-GENDER_CHOICES = [
-    ('male', 'Male'),
-    ('female', 'Female'),
-]
-
-# Role Choices
-ROLE_CHOICES = [
-    ('admin', 'Admin'),
-    ('field_worker', 'Field Worker'),
-]
-
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.CharField(max_length = 100,unique = True)
-    first_name = models.CharField(max_length=50,verbose_name = 'first name')
-    middle_name = models.CharField(max_length=50,null=True,verbose_name = 'middle name')
-    last_name = models.CharField(max_length=50,verbose_name = 'last name')
-    gender = models.CharField(max_length=10,null=True, choices=GENDER_CHOICES)
-    phone_number = models.CharField(max_length=15,null=True, unique=True)
-    profile_image = models.ImageField(upload_to='user_profile_images/',default='default_profile_image/avatar.png', blank=True, null=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES,default='field_worker')
+    email = models.CharField(max_length=100, unique=True)
+    first_name = models.CharField(max_length=50, verbose_name='first name')
+    middle_name = models.CharField(max_length=50, null=True, verbose_name='middle name')
+    last_name = models.CharField(max_length=50, verbose_name='last name')
+    gender = models.CharField(max_length=10, null=True, choices=GENDER_CHOICES)
+    phone_number = models.CharField(max_length=15, null=True, unique=True)
+    profile_image = CloudinaryField(
+        'image',
+        default='default_profile_image/avatar.png',
+        blank=True,
+        null=True
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='field_worker')
     is_active = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     username = None
+
     USERNAME_FIELD = 'email'
-    
+    REQUIRED_FIELDS = ['first_name', 'last_name']
+
     objects = CustomUserManager()
-    
-    REQUIRED_FIELDS =['first_name','last_name']
+
     class Meta:
-        ordering =['-created_at','first_name']
+        ordering = ['-created_at', 'first_name']
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"
-    
+
     @property
     def get_full_name(self):
         return f"{self.first_name} {self.middle_name} {self.last_name}"
-    
-    
-def profile_image(self):
-    if self.profile_image:
-        return mark_safe(f'<img src="{self.profile_image.url}" width="50" height="50" />')
-    return mark_safe(f'<img src="{settings.MEDIA_URL}default_profile_image/avatar.png" width="50" height="50" />')
 
+    # def profile_image_preview(self):
+    #     if self.profile_image:
+    #         return mark_safe(f'<img src="{self.profile_image.url}" width="50" height="50" />')
+        
+    #     default_image_url = f'{settings.MEDIA_URL}default_profile_image/avatar.png'
+    #     return mark_safe(f'<img src="{default_image_url}" width="50" height="50" />')
+    # profile_image.description = 'profile image'
 
 class Warrant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
-    last_name = models.CharField(max_length=100,blank=True,null=True)
-    phone_number = models.CharField(max_length=15,null=True, unique=True)
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    phone_number = models.CharField(max_length=15, null=True, unique=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    id_image = models.ImageField(upload_to='warrant_id_images/',null=True,blank=True)
+    id_image = CloudinaryField('image', blank=True, null=True)
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-    
 
 
 class Equipment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    equipment_type = models.CharField(max_length=100,blank=True,null=True)
-    size = models.CharField(max_length=50, null=True,blank=True)  
-    cause_of_need = models.CharField(max_length=100, null=True, blank=True) 
+    equipment_type = models.CharField(max_length=100, blank=True, null=True)
+    size = models.CharField(max_length=50, null=True, blank=True)
+    cause_of_need = models.CharField(max_length=100, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -105,12 +114,13 @@ class Equipment(models.Model):
     def __str__(self):
         return f"{self.equipment_type.replace('_', ' ')} - {self.size if self.size else 'Unknown Size'}"
 
+
 class DisabilityRecord(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES,blank=True,null=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
     date_of_birth = models.DateField()
     phone_number = models.CharField(max_length=15, null=True, unique=True)
     region = models.CharField(max_length=100, null=True, blank=True)
@@ -125,20 +135,31 @@ class DisabilityRecord(models.Model):
     backrest_height = models.FloatField()
     thigh_length = models.FloatField()
 
-    profile_image = models.ImageField(upload_to='disability_profile_images/', default='default_profile_image/avatar.png', blank=True)
-    kebele_id_image = models.ImageField(upload_to='disability_kebele_id_images/', null=True, blank=True)
+    profile_image = CloudinaryField('image', default='default_profile_image/avatar.png', blank=True)
+    kebele_id_image = CloudinaryField('image', blank=True, null=True)
 
     is_provided = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     deleted = models.BooleanField(default=False)
-    
+
     class Meta:
-        ordering=['-created_at']
+        ordering = ['-created_at']
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.equipment.equipment_type if self.equipment else 'No Equipment'}"
 
     @property
     def get_full_name(self):
         return f"{self.first_name} {self.middle_name} {self.last_name}"
+    
+    def profile_image_preview(self):
+        if self.profile_image:
+            return mark_safe(f'<img src="{self.profile_image.url}" width="50" height="50" />')
+        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
+
+    def kebele_id_image_preview(self):
+        if self.kebele_id_image:  # Corrected to check kebele_id_image instead of profile_image
+            return mark_safe(f'<img src="{self.kebele_id_image.url}" width="50" height="50" />')
+        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
