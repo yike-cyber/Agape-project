@@ -42,15 +42,19 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        print('validated data',validated_data)
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
         profile_image = validated_data.pop('profile_image',None)
+        kebele_id_image = validated_data.pop('kebele_id_image',None)
         disability_record = DisabilityRecord.objects.create(
             **validated_data,
             recorder=self.context['request'].user
         )
         if profile_image is not None:
             disability_record.profile_image = profile_image
+        if kebele_id_image is not None:
+            disability_record.kebele_id_image = kebele_id_image
 
         if warrant_data:
             warrant = Warrant.objects.create(**warrant_data)

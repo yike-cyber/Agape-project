@@ -673,6 +673,7 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, partial=True)
+        print('data comming',request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         success_response = SUCCESS_RESPONSE.copy()
