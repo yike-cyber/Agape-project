@@ -40,13 +40,11 @@ class EquipmentSerializer(serializers.ModelSerializer):
             'id', 'equipment_type', 'size', 'cause_of_need', 
             'created_at', 'updated_at'
         ]
-
 class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
-    warrant = WarrantSerializer() 
-    equipment = EquipmentSerializer()  
+    warrant = WarrantSerializer()
+    equipment = EquipmentSerializer()
     profile_image_url = serializers.SerializerMethodField()
-
 
     class Meta:
         model = DisabilityRecord
@@ -56,53 +54,72 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
             'woreda', 'recorder', 'warrant', 'equipment',
             'hip_width', 'backrest_height', 'thigh_length',
             'profile_image', 'kebele_id_image', 'is_provided',
-            'deleted', 'is_active', 'created_at', 'updated_at','profile_image_url',
+            'deleted', 'is_active', 'created_at', 'updated_at', 'profile_image_url',
         ]
-   
+
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
         if obj.profile_image:
             return request.build_absolute_uri(obj.profile_image.url)
         return request.build_absolute_uri(settings.MEDIA_URL + 'default_profile_image/avatar.png')
-    
+
     def create(self, validated_data):
+        # Pop nested data
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
 
+        # Create the DisabilityRecord instance
         disability_record = DisabilityRecord.objects.create(**validated_data)
 
+        # Handle Warrant
         if warrant_data:
-            warrant_serializer = WarrantSerializer(data=warrant_data,partial = True)
+            warrant_serializer = WarrantSerializer(data=warrant_data)
             warrant_serializer.is_valid(raise_exception=True)
-            disability_record.warrant = warrant_serializer.save()
+            warrant = warrant_serializer.save()
+            disability_record.warrant = warrant  # Associate with DisabilityRecord
 
+        # Handle Equipment
         if equipment_data:
-            equipment_serializer = EquipmentSerializer(data=equipment_data,partial = True)
+            equipment_serializer = EquipmentSerializer(data=equipment_data)
             equipment_serializer.is_valid(raise_exception=True)
-            disability_record.equipment = equipment_serializer.save()
+            equipment = equipment_serializer.save()
+            disability_record.equipment = equipment  # Associate with DisabilityRecord
 
         disability_record.save()
         return disability_record
 
     def update(self, instance, validated_data):
+        # Pop nested data
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
 
+        # Update non-nested fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
+        # Update Warrant
         if warrant_data:
-            warrant_serializer = WarrantSerializer(instance.warrant, data=warrant_data)
+            if instance.warrant:
+                warrant_serializer = WarrantSerializer(instance.warrant, data=warrant_data, partial=True)
+            else:
+                warrant_serializer = WarrantSerializer(data=warrant_data)
             warrant_serializer.is_valid(raise_exception=True)
-            warrant_serializer.save()
+            warrant = warrant_serializer.save()
+            instance.warrant = warrant
 
+        # Update Equipment
         if equipment_data:
-            equipment_serializer = EquipmentSerializer(instance.equipment, data=equipment_data)
+            if instance.equipment:
+                equipment_serializer = EquipmentSerializer(instance.equipment, data=equipment_data, partial=True)
+            else:
+                equipment_serializer = EquipmentSerializer(data=equipment_data)
             equipment_serializer.is_valid(raise_exception=True)
-            equipment_serializer.save()
+            equipment = equipment_serializer.save()
+            instance.equipment = equipment
 
         instance.save()
         return instance
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
