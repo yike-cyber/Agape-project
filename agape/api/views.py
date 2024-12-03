@@ -56,7 +56,6 @@ class RegisterView(APIView):
             recipient_list = [user.email]
             send_email(subject, message, recipient_list)
 
-            # Success response
             response_data = SUCCESS_RESPONSE.copy()
             response_data["message"] = "User created successfully. Please verify the email."
             response_data["data"] = {
@@ -287,7 +286,7 @@ class UserListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.get_queryset().exclude(id=request.user.id)
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
