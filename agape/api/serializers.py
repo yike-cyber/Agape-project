@@ -73,14 +73,14 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
 
         # Handle Warrant
         if warrant_data:
-            warrant_serializer = WarrantSerializer(data=warrant_data)
+            warrant_serializer = WarrantSerializer(data=warrant_data,partial = True)
             warrant_serializer.is_valid(raise_exception=True)
             warrant = warrant_serializer.save()
             disability_record.warrant = warrant  # Associate with DisabilityRecord
 
         # Handle Equipment
         if equipment_data:
-            equipment_serializer = EquipmentSerializer(data=equipment_data)
+            equipment_serializer = EquipmentSerializer(data=equipment_data,partial = True)
             equipment_serializer.is_valid(raise_exception=True)
             equipment = equipment_serializer.save()
             disability_record.equipment = equipment  # Associate with DisabilityRecord
