@@ -41,31 +41,41 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
             'deleted', 'is_active','created_at', 'updated_at'
         ]
 
-    def create(self, validated_data):
-        print('validated data',validated_data)
-        warrant_data = validated_data.pop('warrant', None)
-        equipment_data = validated_data.pop('equipment', None)
-        profile_image = validated_data.pop('profile_image',None)
-        kebele_id_image = validated_data.pop('kebele_id_image',None)
-        disability_record = DisabilityRecord.objects.create(
-            **validated_data,
-            recorder=self.context['request'].user
-        )
-        if profile_image is not None:
-            disability_record.profile_image = profile_image
-        if kebele_id_image is not None:
-            disability_record.kebele_id_image = kebele_id_image
+def create(self, validated_data):
+    print('validated data', validated_data)
 
-        if warrant_data:
-            warrant = Warrant.objects.create(**warrant_data)
-            disability_record.warrant = warrant
+    # Pop nested data
+    warrant_data = validated_data.pop('warrant', None)
+    equipment_data = validated_data.pop('equipment', None)
 
-        if equipment_data:
-            equipment = Equipment.objects.create(**equipment_data)
-            disability_record.equipment = equipment
+    # Create the DisabilityRecord instance
+    disability_record = DisabilityRecord.objects.create(
+        **validated_data,
+        recorder=self.context['request'].user
+    )
 
-        disability_record.save()
-        return disability_record
+    # Handle image uploads
+    profile_image = validated_data.get('profile_image')
+    kebele_id_image = validated_data.get('kebele_id_image')
+
+    if profile_image:
+        # Save the uploaded profile image
+        disability_record.profile_image.save(profile_image.name, profile_image, save=False)
+
+    if kebele_id_image:
+        # Save the uploaded kebele ID image
+        disability_record.kebele_id_image.save(kebele_id_image.name, kebele_id_image, save=False)
+
+    if warrant_data:
+        warrant = Warrant.objects.create(**warrant_data)
+        disability_record.warrant = warrant
+
+    if equipment_data:
+        equipment = Equipment.objects.create(**equipment_data)
+        disability_record.equipment = equipment
+
+    disability_record.save()
+    return disability_record
 
 class RegisterSerializer(serializers.ModelSerializer):
 
