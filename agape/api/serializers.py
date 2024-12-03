@@ -43,8 +43,10 @@ class EquipmentSerializer(serializers.ModelSerializer):
 
 class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
-    warrant = WarrantSerializer()  # Nested serializer for Warrant
-    equipment = EquipmentSerializer()  # Nested serializer for Equipment
+    warrant = WarrantSerializer() 
+    equipment = EquipmentSerializer()  
+    profile_image_url = serializers.SerializerMethodField()
+
 
     class Meta:
         model = DisabilityRecord
@@ -54,9 +56,15 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
             'woreda', 'recorder', 'warrant', 'equipment',
             'hip_width', 'backrest_height', 'thigh_length',
             'profile_image', 'kebele_id_image', 'is_provided',
-            'deleted', 'is_active', 'created_at', 'updated_at'
+            'deleted', 'is_active', 'created_at', 'updated_at','profile_image_url',
         ]
-
+   
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.profile_image:
+            return request.build_absolute_uri(obj.profile_image.url)
+        return request.build_absolute_uri(settings.MEDIA_URL + 'default_profile_image/avatar.png')
+    
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
@@ -64,12 +72,12 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         disability_record = DisabilityRecord.objects.create(**validated_data)
 
         if warrant_data:
-            warrant_serializer = WarrantSerializer(data=warrant_data)
+            warrant_serializer = WarrantSerializer(data=warrant_data,partial = True)
             warrant_serializer.is_valid(raise_exception=True)
             disability_record.warrant = warrant_serializer.save()
 
         if equipment_data:
-            equipment_serializer = EquipmentSerializer(data=equipment_data)
+            equipment_serializer = EquipmentSerializer(data=equipment_data,partial = True)
             equipment_serializer.is_valid(raise_exception=True)
             disability_record.equipment = equipment_serializer.save()
 

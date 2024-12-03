@@ -80,13 +80,6 @@ class User(AbstractUser):
     def get_full_name(self):
         return f"{self.first_name} {self.middle_name} {self.last_name}"
 
-    # def profile_image_preview(self):
-    #     if self.profile_image:
-    #         return mark_safe(f'<img src="{self.profile_image.url}" width="50" height="50" />')
-        
-    #     default_image_url = f'{settings.MEDIA_URL}default_profile_image/avatar.png'
-    #     return mark_safe(f'<img src="{default_image_url}" width="50" height="50" />')
-    # profile_image.description = 'profile image'
 
 class Warrant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

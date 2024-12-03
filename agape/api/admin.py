@@ -28,13 +28,38 @@ class CustomUserAdmin(UserAdmin):
     # Custom method to display profile image
     def profile_image_display(self, obj):
         if obj.profile_image:
-             return mark_safe(f'<img src="{settings.MEDIA_URL}default_profile_image/avatar.png" width="50" height="50" />')
+            print(obj.profile_image.url)
+            return mark_safe(f'<img src="{obj.profile_image.url}" width="50" height="50" />')
         else:
-             return mark_safe(f'<img src="{obj.profile_image.url}" width="50" height="50" />')
-
+             return mark_safe(f'<img src="{settings.MEDIA_URL}default_profile_image/avatar.png" width="50" height="50" />')
 
     profile_image_display.short_description = 'Profile Image'
+    
+    
+class WarrantAdmin(admin.ModelAdmin):
+    list_display = ['first_name', 'middle_name', 'last_name', 'phone_number', 'gender', 'id_image_preview', 'deleted']
+    search_fields = ['first_name', 'last_name', 'phone_number']
+    list_filter = ['gender', 'deleted']
+
+    def id_image_preview(self, obj):
+        if obj.id_image:
+            return mark_safe(f'<img src="{obj.id_image.url}" width="50" height="50" />')
+        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
+    id_image_preview.short_description = 'ID Image'
+
+
+# Disability Record Admin
+class DisabilityRecordAdmin(admin.ModelAdmin):
+    list_display = ['get_full_name', 'gender', 'region', 'is_active', 'is_provided', 'profile_image_preview']
+    search_fields = ['first_name', 'last_name', 'region', 'zone', 'city']
+    list_filter = ['gender', 'region', 'is_active', 'is_provided']
+
+    def profile_image_preview(self, obj):
+        if obj.profile_image:
+            return mark_safe(f'<img src="{obj.profile_image.url}" width="50" height="50" />')
+        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
+    profile_image_preview.short_description = 'Profile Image'
 
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(Warrant)
-admin.site.register(DisabilityRecord)
+admin.site.register(Warrant,WarrantAdmin)
+admin.site.register(DisabilityRecord,DisabilityRecordAdmin)
