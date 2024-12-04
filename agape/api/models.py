@@ -30,9 +30,6 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-        """
-        Create and return a superuser with the given email and password.
-        """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -54,7 +51,7 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=15, null=True, unique=True)
     profile_image = CloudinaryField(
         'image',
-        default='default_profile_image/avatar.png',
+        default='avatar_zopzfl.png',
         blank=True,
         null=True
     )
@@ -88,7 +85,12 @@ class Warrant(models.Model):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     phone_number = models.CharField(max_length=15, null=True, unique=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    id_image = CloudinaryField('image', blank=True, null=True)
+    id_image = CloudinaryField(
+        'image',
+        blank=True,
+        null=True,
+        folder = 'warrant_id_images'
+    )
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
@@ -127,9 +129,15 @@ class DisabilityRecord(models.Model):
     hip_width = models.FloatField()
     backrest_height = models.FloatField()
     thigh_length = models.FloatField()
+    profile_image = CloudinaryField(
+        'image',
+        default='avatar_zopzfl.png',
+        blank=True,
+        null=True,
+        folder = 'disability_records/profile_images'
+    )
 
-    profile_image = CloudinaryField('image', default='default_profile_image/avatar.png', blank=True)
-    kebele_id_image = CloudinaryField('image', blank=True, null=True)
+    kebele_id_image = CloudinaryField('image', blank=True, null=True,folder = 'disability_records/kebele_id_images')
 
     is_provided = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

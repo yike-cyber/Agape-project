@@ -1,10 +1,10 @@
 from django.urls import path
 from .views import (
     RegisterView, VerifyEmailView,VerifyOTPView, LoginView, ResetPasswordView,
-    SetNewPasswordView, LogoutView,
-     UserListCreateView, UserDetailView, UserFilterView,DeleteUserPermanentlyView,
+    SetNewPasswordView, LogoutView,CurrentUserProfileView,
+     UserListCreateView, UserDetailView,UserUpdatePasswordView, UserFilterView,UserBlockView,DeleteUserPermanentlyView,
     WarrantListCreateView, WarrantDetailView,
-    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView
+    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView,FileExportView
     
 )
 
@@ -20,10 +20,13 @@ urlpatterns = [
     path('auth/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('auth/set-new-password/', SetNewPasswordView.as_view(), name='set-new-password'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/profile/', CurrentUserProfileView.as_view(), name='loged-in-profile'),
     
     path('users/', UserListCreateView.as_view(), name='user-list-create'),
     path('users/<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/<uuid:id>/block/', UserBlockView.as_view(), name='block-user'),
     path('users/<uuid:id>/delete/', DeleteUserPermanentlyView.as_view(), name='delete-user'),
+    path('users/<uuid:id>/update-password/', UserUpdatePasswordView.as_view(), name='update-password'),
     path('users/filter/', UserFilterView.as_view(), name='user-filter'),
     
     path('warrants/', WarrantListCreateView.as_view(), name='warrant-list-create'),
@@ -32,4 +35,7 @@ urlpatterns = [
     path('disability-records/', DisabilityRecordListCreateView.as_view(), name='disability-record-list-create'),
     path('disability-records/<uuid:id>/', DisabilityRecordDetailView.as_view(), name='disability-record-detail'),
     path('disability-records/filter/', DisabilityRecordListFilterView.as_view(), name='disability-record-filter'),
+    
+    #file export
+    path('disability-records/export/',FileExportView.as_view(), name='file-export'),
 ]

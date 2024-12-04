@@ -20,9 +20,10 @@ class UserSerializer(serializers.ModelSerializer):
         ]
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
-        if obj.profile_image:
+        if request and obj.profile_image:
+            print('request exist')
             return request.build_absolute_uri(obj.profile_image.url)
-        return None
+        return obj.profile_image.url if obj.profile_image else None
 
 class WarrantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,7 +63,6 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.profile_image:
             return request.build_absolute_uri(obj.profile_image.url)
-        print('setting media url',settings.MEDIA_URL)
         return request.build_absolute_uri(settings.MEDIA_URL + 'default_profile_image/avatar.png')
 
     def create(self, validated_data):

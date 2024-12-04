@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics, permissions
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, AuthenticationFailed
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import status
@@ -20,6 +20,12 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.token_blacklist.models import  BlacklistedToken,OutstandingToken
 
+import csv
+from io import BytesIO
+import pandas as pd
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
 from uuid import UUID
 import random
 from django.utils import timezone
@@ -31,6 +37,22 @@ from .serializers import UserSerializer,WarrantSerializer,DisabilityRecordSerial
 from .utils import send_email
 from .constants import SUCCESS_RESPONSE, ERROR_RESPONSE
 from .pagination import CustomPagination
+
+
+
+class CurrentUserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user_id = request.user.id
+        print('user',user_id)
+        try:
+            profile = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Profile not found.'}, status=404)
+
+        serializer = UserSerializer(profile)
+        return Response(serializer.data)
 
 class RegisterView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -171,15 +193,12 @@ class ResetPasswordView(APIView):
 
 class VerifyOTPView(APIView):
     def post(self, request):
-        # Prepare success and error response templates
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
-        # Retrieve email and OTP from request
         email = request.data.get('email')
         otp = request.data.get('otp')
 
-        # Check if both email and OTP are provided
         if not email or not otp:
             error_response["message"] = "Email and OTP are required."
             error_response["error_code"] = "missing_parameters"
@@ -188,7 +207,6 @@ class VerifyOTPView(APIView):
         # Retrieve the OTP from the cache using the email as the key
         cached_otp = cache.get(f"reset_password_otp_{email}")
 
-        # Check if the OTP exists in cache (expired or not generated)
         if not cached_otp:
             error_response["message"] = "OTP expired or not generated."
             error_response["error_code"] = "otp_not_found"
@@ -208,10 +226,10 @@ class SetNewPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        
         success_response = SUCCESS_RESPONSE.copy()
         error_response = ERROR_RESPONSE.copy()
 
-        # Deserialize request data with the SetNewPasswordSerializer
         serializer = SetNewPasswordSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -236,8 +254,37 @@ class SetNewPasswordView(APIView):
         error_response["errors"] = serializer.errors
         return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
-class LogoutView(APIView):
+class UserUpdatePasswordView(APIView):
     permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_object(self):
+        try:
+            return User.objects.get(id=self.kwargs[self.lookup_field])
+        except User.DoesNotExist:
+            raise NotFound(detail="User not found.")
+
+    def patch(self, request, *args, **kwargs):
+        user = self.get_object()
+        if request.user != user and request.user.role != 'admin':
+            raise AuthenticationFailed("You are not authorized to update this password.")
+
+        password = request.data.get('password')
+        password2 = request.data.get('password2')
+        
+        if password != password2:
+            return Response({
+                "message": "Passwords do not match."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(password)
+        user.save()
+        
+        return Response({
+            "message": "Password updated successfully."
+        }, status=status.HTTP_200_OK)
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         success_response = SUCCESS_RESPONSE.copy()
@@ -393,6 +440,30 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
             error_response["errors"] = serializer.errors
             return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
+class UserBlockView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+    
+    def get_object(self):
+        try:
+            return User.objects.get(id=self.kwargs[self.lookup_field])
+        except User.DoesNotExist:
+            raise NotFound(detail="User not found.")
+    
+    def patch(self, request, *args, **kwargs):
+        if request.user.role == 'admin':
+            user = self.get_object()
+            user.is_active = not user.is_active
+            user.save()
+
+            action = "unblocked" if user.is_active else "blocked"
+            return Response({
+                "message": f"User {action} successfully."
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "message": "You are not allowed to perform this action."
+        }, status=status.HTTP_403_FORBIDDEN)
 
 class DeleteUserPermanentlyView(generics.DestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -745,6 +816,7 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
 
         # Get query parameters from the request
         gender = self.request.query_params.get('gender')
+        is_provided = self.request.query_params.get('is_provided')
         region = self.request.query_params.get('region')
         wheelchair_type = self.request.query_params.get('wheelchair_type')
         month = self.request.query_params.get('month')
@@ -755,8 +827,10 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
         # Filter by gender if provided
         if gender:
             queryset = queryset.filter(gender__iexact=gender)
+            
+        if is_provided:
+            queryset = queryset.filter(is_provided=is_provided)
 
-        # Filter by region if provided
         if region:
             queryset = queryset.filter(region__icontains=region)
 
@@ -764,7 +838,6 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
         if wheelchair_type:
             queryset = queryset.filter(wheelchair_type__icontains=wheelchair_type)
 
-        # Filter by month and year if provided
         if month and year:
             try:
                 month = int(month)
@@ -788,25 +861,166 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
                 end_date = timezone.make_aware(datetime.combine(end_date, datetime.min.time()))
                 queryset = queryset.filter(created_at__lte=end_date)
             except ValueError:
-                pass  # Ignore if invalid end_date format
+                pass  
 
         return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         if not queryset.exists():
-            # If no records match the filter, return an error response
             error_response = ERROR_RESPONSE.copy()
             error_response["message"] = "No disability records found matching the search criteria."
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
-        # Serialize the data
         serializer = self.get_serializer(queryset, many=True)
         
-        # Return success response with the serialized data
         success_response = SUCCESS_RESPONSE.copy()
         success_response["message"] = "Disability records retrieved successfully."
         success_response["data"] = serializer.data
         return Response(success_response, status=status.HTTP_200_OK)
+
+
+
+class FileExportView(APIView):
+    # permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        
+        filters = request.data.get("filters", {})
+        columns = request.data.get("columns", [])
+        file_format = request.data.get("format", "excel") 
+
+        queryset = self.filter_queryset(filters)
+
+        if not queryset.exists():
+            return Response({"error": "No records found for the provided filters"}, status=status.HTTP_404_NOT_FOUND)
+
+        data = list(queryset.values(*columns))
+
+        # Generate the file in the requested format
+        if file_format == "csv":
+            return self.generate_csv(data, columns)
+        elif file_format == "excel":
+            return self.generate_excel(data, columns)
+        elif file_format == "pdf":
+            return self.generate_pdf(data, columns)
+        else:
+            return Response({"error": "Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
+
+    def filter_queryset(self, filters):
+        queryset = DisabilityRecord.objects.all()
+
+        gender = filters.get('gender')
+        size = filters.get('size')
+        region = filters.get('region')
+        is_provided = filters.get('is_provided')
+        equipment_type = filters.get('equipment_type')
+        month = filters.get('month')
+        year = filters.get('year')
+        start_date = filters.get('start_date')
+        end_date = filters.get('end_date')
+
+        if is_provided:
+            queryset = queryset.filter(is_provided=is_provided)
+            
+        if gender:
+            queryset = queryset.filter(gender__iexact=gender)
+
+        if region:
+            queryset = queryset.filter(region__icontains=region)
+
+        if equipment_type:
+            queryset = queryset.filter(equipment__equipment_type__icontains=equipment_type)
+            
+        if size:
+            queryset = queryset.filter(equipment__size=size)
+
+        if month and year:
+            try:
+                month = int(month)
+                year = int(year)
+                queryset = queryset.filter(date_of_birth__month=month, date_of_birth__year=year)
+            except ValueError:
+                pass
+
+        if start_date:
+            try:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                start_date = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                queryset = queryset.filter(created_at__gte=start_date)
+            except ValueError:
+                pass
+
+        if end_date:
+            try:
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                end_date = timezone.make_aware(datetime.combine(end_date, datetime.min.time()))
+                queryset = queryset.filter(created_at__lte=end_date)
+            except ValueError:
+                pass
+
+        return queryset
+
+    def generate_csv(self, data, columns):
+        
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="export.csv"'
+
+        writer = csv.DictWriter(response, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(data)
+        
+        return response
+
+    def generate_excel(self, data, columns):
+        df = pd.DataFrame(data, columns=columns)
+        
+        # Convert timezone-aware datetime fields to timezone-unaware for specific columns
+        if 'created_at' in df.columns:
+            df['created_at'] = df['created_at'].dt.tz_localize(None)
+        if 'updated_at' in df.columns:
+            df['updated_at'] = df['updated_at'].dt.tz_localize(None)
+
+        # Prepare Excel file in memory
+        output = BytesIO()
+        df.to_excel(output, index=False)
+
+        # Create response with the correct content type
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="export.xlsx"'
+    
+
+        return response
+
+    def generate_pdf(self, data, columns):
+        # Create a PDF response
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = 'attachment; filename="export.pdf"'
+
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+
+        x = 50
+        y = 750
+        pdf.drawString(x, y, "Exported Data")
+        y -= 20
+        for record in data:
+            line = ", ".join([f"{col}: {record[col]}" for col in columns])
+            pdf.drawString(x, y, line)
+            y -= 20
+            if y < 50:  
+                pdf.showPage()
+                y = 750
+
+        pdf.save()
+        buffer.seek(0)
+
+        response.write(buffer.getvalue())
+        buffer.close()
+
+        return response
 
 
