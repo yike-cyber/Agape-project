@@ -165,7 +165,6 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 
 CLOUDINARY_URL = env('CLOUDINARY_URL')
-print('url',CLOUDINARY_URL)
 cloudinary.config(
     cloudinary_url=CLOUDINARY_URL
 )

@@ -291,13 +291,14 @@ class UserListCreateView(generics.ListCreateAPIView):
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        if not paginated_queryset and not queryset.exists():
+        if not queryset.exists():
             response = ERROR_RESPONSE.copy()
             response.update({
                 "message": "No users found matching found.",
                 "error_code": "USER_NOT_FOUND"
             })
             return Response(response, status=status.HTTP_404_NOT_FOUND)
+        
         elif paginated_queryset is not None:
             serializer = self.get_serializer(paginated_queryset, many=True)
 
