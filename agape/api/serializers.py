@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import ValidationError
 
 from .models import Warrant, DisabilityRecord, Equipment
 from .utils import validate_password
 from django.conf import settings
+
 
 User = get_user_model()
 
@@ -24,6 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
             print('request exist')
             return request.build_absolute_uri(obj.profile_image.url)
         return obj.profile_image.url if obj.profile_image else None
+
 
 class WarrantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,65 +64,91 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
 
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
-        if obj.profile_image:
+        if request and obj.profile_image:
+            print('request exist')
             return request.build_absolute_uri(obj.profile_image.url)
-        return request.build_absolute_uri(settings.MEDIA_URL + 'default_profile_image/avatar.png')
+        return obj.profile_image.url if obj.profile_image else None
 
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
 
-        disability_record = DisabilityRecord.objects.create(**validated_data)
+        try:
+            disability_record = DisabilityRecord.objects.create(**validated_data)
 
-        if warrant_data:
-            warrant_serializer = WarrantSerializer(data=warrant_data,partial = True)
-            warrant_serializer.is_valid(raise_exception=True)
-            warrant = warrant_serializer.save()
-            disability_record.warrant = warrant  
+            if warrant_data:
+                warrant_serializer = WarrantSerializer(data=warrant_data, partial=True)
+                warrant_serializer.is_valid(raise_exception=True)
+                warrant = warrant_serializer.save()
+                disability_record.warrant = warrant
 
-        # Handle Equipment
-        if equipment_data:
-            equipment_serializer = EquipmentSerializer(data=equipment_data,partial = True)
-            equipment_serializer.is_valid(raise_exception=True)
-            equipment = equipment_serializer.save()
-            disability_record.equipment = equipment  # Associate with DisabilityRecord
+            if equipment_data:
+                equipment_serializer = EquipmentSerializer(data=equipment_data, partial=True)
+                equipment_serializer.is_valid(raise_exception=True)
+                equipment = equipment_serializer.save()
+                disability_record.equipment = equipment  
 
-        disability_record.save()
-        return disability_record
+            disability_record.save()
+            return disability_record
+        
+        except ValidationError as e:
+            raise ValidationError({
+                "status": "error",
+                "message": "Validation error occurred while creating disability record.",
+                "errors": e.detail
+            })
+
+        except Exception as e:
+            raise Exception({
+                "status": "error",
+                "message": "An unexpected error occurred while creating the disability record.",
+                "error": str(e)
+            })
 
     def update(self, instance, validated_data):
-        # Pop nested data
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
 
-        # Update non-nested fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        try:
+            # Update non-nested fields
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
 
-        # Update Warrant
-        if warrant_data:
-            if instance.warrant:
-                warrant_serializer = WarrantSerializer(instance.warrant, data=warrant_data, partial=True)
-            else:
-                warrant_serializer = WarrantSerializer(data=warrant_data)
-            warrant_serializer.is_valid(raise_exception=True)
-            warrant = warrant_serializer.save()
-            instance.warrant = warrant
+            if warrant_data:
+                if instance.warrant:
+                    warrant_serializer = WarrantSerializer(instance.warrant, data=warrant_data, partial=True)
+                else:
+                    warrant_serializer = WarrantSerializer(data=warrant_data)
+                warrant_serializer.is_valid(raise_exception=True)
+                warrant = warrant_serializer.save()
+                instance.warrant = warrant
 
-        # Update Equipment
-        if equipment_data:
-            if instance.equipment:
-                equipment_serializer = EquipmentSerializer(instance.equipment, data=equipment_data, partial=True)
-            else:
-                equipment_serializer = EquipmentSerializer(data=equipment_data)
-            equipment_serializer.is_valid(raise_exception=True)
-            equipment = equipment_serializer.save()
-            instance.equipment = equipment
+            # Handle Equipment update
+            if equipment_data:
+                if instance.equipment:
+                    equipment_serializer = EquipmentSerializer(instance.equipment, data=equipment_data, partial=True)
+                else:
+                    equipment_serializer = EquipmentSerializer(data=equipment_data)
+                equipment_serializer.is_valid(raise_exception=True)
+                equipment = equipment_serializer.save()
+                instance.equipment = equipment
 
-        instance.save()
-        return instance
+            instance.save()
+            return instance
+        
+        except ValidationError as e:
+            raise ValidationError({
+                "status": "error",
+                "message": "Validation error occurred while updating disability record.",
+                "errors": e.detail
+            })
 
-
+        except Exception as e:
+            raise Exception({
+                "status": "error",
+                "message": "An unexpected error occurred while updating the disability record.",
+                "error": str(e)
+            })
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

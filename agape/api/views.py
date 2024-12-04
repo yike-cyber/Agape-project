@@ -289,6 +289,7 @@ class UserUpdatePasswordView(APIView):
         return Response({
             "message": "Password updated successfully."
         }, status=status.HTTP_200_OK)
+        
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -401,7 +402,8 @@ class UserListCreateView(generics.ListCreateAPIView):
             status = status.HTTP_403_FORBIDDEN
              )
 
-class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+#update and access user detail
+class UserDetailView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -411,40 +413,34 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         user_id = self.kwargs.get(self.lookup_field)
         try:
             user = self.queryset.get(id=user_id)
-            if not user.is_active and user.deleted == True:
-                raise NotFound(detail="User is deactivated or deleted.")
+            if not user.is_active:
+                raise NotFound(detail="User is deactivated and can't be accessed.")
             return user
         except User.DoesNotExist:
-            raise NotFound(detail="User not found.")
-
-    def delete(self, request, *args, **kwargs):
-        success_response = SUCCESS_RESPONSE.copy()
-        error_response = ERROR_RESPONSE.copy()
-
-        user = self.get_object()
-        user.deleted = True  
-        user.save()
-
-        success_response["message"] = "User deleted successfully."
-        return Response(success_response, status=status.HTTP_200_OK)
+            error_response = {
+                "status": "error",
+                "message": "User not found."
+            }
+            raise NotFound(detail=error_response)
 
     def update(self, request, *args, **kwargs):
-        success_response = SUCCESS_RESPONSE.copy()
-        error_response = ERROR_RESPONSE.copy()
 
-        partial = kwargs.pop('partial', False)
         user = self.get_object()
-        serializer = self.get_serializer(user, data=request.data, partial=partial)
+        serializer = self.get_serializer(user, data=request.data, partial=True)
 
         if serializer.is_valid():
-            self.perform_update(serializer)
-            success_response["message"] = "User updated successfully."
-            success_response["data"] = serializer.data
-            return Response(success_response, status=status.HTTP_200_OK)
+            serializer.save()
+            
+            return Response( {
+            "message": "User updated successfully.",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
         else:
-            error_response["message"] = "Validation error."
-            error_response["errors"] = serializer.errors
-            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+            "status": "error",
+            "message": "Validation error.",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class UserBlockView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -491,11 +487,10 @@ class DeleteUserPermanentlyView(generics.DestroyAPIView):
             "message":"user deleted Permanently." },
              status=status.HTTP_204_NO_CONTENT)
 
-# for filtering users
+#filtering users
 class UserFilterView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
 
     def get_queryset(self):
         query = self.request.query_params.get('search', '')
@@ -521,19 +516,20 @@ class UserFilterView(generics.ListAPIView):
         queryset = self.get_queryset()
 
         if not queryset.exists():
-            error_response = ERROR_RESPONSE.copy()
-            error_response.update({
+            error_response = {
+                "status": "error",
                 "message": "No users found matching the search criteria.",
                 "error_code": "USER_NOT_FOUND"
-            })
+            }
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
         paginator = PageNumberPagination()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
+
         serializer = self.get_serializer(paginated_queryset, many=True)
 
-        success_response = SUCCESS_RESPONSE.copy()
-        success_response.update({
+        success_response = {
+            "status": "success",
             "message": "Users fetched successfully.",
             "data": serializer.data,
             "pagination": {
@@ -541,10 +537,10 @@ class UserFilterView(generics.ListAPIView):
                 "next": paginator.get_next_link(),
                 "previous": paginator.get_previous_link()
             }
-        })
+        }
         return paginator.get_paginated_response(success_response)
-    
-# List of warrents
+
+# create and list warrant
 class WarrantListCreateView(generics.ListCreateAPIView):
     queryset = Warrant.objects.all()
     serializer_class = WarrantSerializer
@@ -552,7 +548,7 @@ class WarrantListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = self.queryset.fileter(deleted=False)
+        queryset = self.queryset.filter(deleted=False)
         search_term = self.request.query_params.get('search', None)
 
         if search_term:
@@ -565,59 +561,68 @@ class WarrantListCreateView(generics.ListCreateAPIView):
             )
             queryset = queryset.filter(filters)
 
-        return queryset.order_by('-first_name')  
+        return queryset.order_by('-first_name')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        if paginated_queryset is None and not queryset.exists():
-            return Response(
-                {
-                    "status": "error",
-                    "message": "No warrants found matching the search criteria.",
-                    "error_code": "WARRANT_NOT_FOUND",
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        if not queryset.exists():
+            error_response = {
+                "status": "error",
+                "message": "No warrants found matching the search criteria.",
+                "error_code": "WARRANT_NOT_FOUND"
+            }
+            return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
         if paginated_queryset is not None:
             serializer = self.get_serializer(paginated_queryset, many=True)
-            return paginator.get_paginated_response(
-                {
-                    "status": "success",
-                    "message": "Warrants fetched successfully.",
-                    "data": serializer.data,
-                    "pagination": {
-                        "count": paginator.page.paginator.count,
-                        "next": paginator.get_next_link(),
-                        "previous": paginator.get_previous_link(),
-                    },
-                }
-            )
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(
-            {
+            return paginator.get_paginated_response({
                 "status": "success",
                 "message": "Warrants fetched successfully.",
                 "data": serializer.data,
-                "pagination": None,
-            },
-            status=status.HTTP_200_OK,
-        )
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+                "pagination": {
+                    "count": paginator.page.paginator.count,
+                    "next": paginator.get_next_link(),
+                    "previous": paginator.get_previous_link(),
+                },
+            })
 
-        success_response = SUCCESS_RESPONSE.copy()
-        success_response.update({
-            "message": "Warrant created successfully.",
-            "data": serializer.data
-        })
-        return Response(success_response, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "status": "success",
+            "message": "Warrants fetched successfully.",
+            "data": serializer.data,
+            "pagination": None,
+        }, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+
+            success_response = {
+                "status": "success",
+                "message": "Warrant created successfully.",
+                "data": serializer.data
+            }
+            return Response(success_response, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({
+                "status": "error",
+                "message": str(e),
+                "error_code": "VALIDATION_ERROR"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": "Internal Server Error: " + str(e),
+                "error_code": "INTERNAL_SERVER_ERROR"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
 # Retrieve, Update, and Delete Warrant
 class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -631,18 +636,16 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
             instance = self.get_object()
             serializer = self.get_serializer(instance)
 
-            success_response = SUCCESS_RESPONSE.copy()
-            success_response.update({
+            success_response = {
                 "message": "Warrant retrieved successfully.",
                 "data": serializer.data
-            })
+            }
             return Response(success_response, status=status.HTTP_200_OK)
         except Warrant.DoesNotExist:
-            error_response = ERROR_RESPONSE.copy()
-            error_response.update({
+            error_response = {
                 "message": "Warrant not found.",
                 "error_code": "WARRANT_NOT_FOUND"
-            })
+            }
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
     def update(self, request, *args, **kwargs):
@@ -653,18 +656,16 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
 
-            success_response = SUCCESS_RESPONSE.copy()
-            success_response.update({
+            success_response = {
                 "message": "Warrant updated successfully.",
                 "data": serializer.data
-            })
+            }
             return Response(success_response, status=status.HTTP_200_OK)
         except Warrant.DoesNotExist:
-            error_response = ERROR_RESPONSE.copy()
-            error_response.update({
-                "message": "Warrant not found.",
-                "error_code": "WARRANT_NOT_FOUND"
-            })
+            error_response = {
+                "status": "error",
+                "message": "Warrant not found."
+            }
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
     def destroy(self, request, *args, **kwargs):
@@ -673,21 +674,17 @@ class WarrantDetailView(generics.RetrieveUpdateDestroyAPIView):
             instance.deleted = True  
             instance.save()
 
-            success_response = SUCCESS_RESPONSE.copy()
-            success_response.update({
+            success_response = {
                 "message": "Warrant deleted successfully."
-            })
+            }
             return Response(success_response, status=status.HTTP_200_OK)
         except Warrant.DoesNotExist:
-            error_response = ERROR_RESPONSE.copy()
-            error_response.update({
-                "message": "Warrant not found.",
-                "error_code": "WARRANT_NOT_FOUND"
-            })
+            error_response = {
+                "message": "Warrant not found."
+            }
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
 # List and Create Disability Records
-
 class DisabilityRecordListCreateView(generics.ListCreateAPIView):
     queryset = DisabilityRecord.objects.all()
     serializer_class = DisabilityRecordSerializer
@@ -720,6 +717,19 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+
+        if not queryset.exists():
+            return Response({
+                "status": "success",
+                "message": "No disability records found.",
+                "data": [],
+                "pagination": {
+                    "count": 0,
+                    "next": None,
+                    "previous": None
+                }
+            }, status=status.HTTP_200_OK)
+
         paginator = self.pagination_class()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
 
@@ -750,29 +760,33 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
         }
         return paginator.get_paginated_response(success_response)
 
-    def create(self, request, *args, **kwargs):
+    def perform_create(self, serializer):
         try:
-            serializer = self.get_serializer(data=request.data, partial=True)
-            print('Incoming data:', request.data) 
-            serializer.is_valid(raise_exception=True) 
-            self.perform_create(serializer)  
+            disability_record = serializer.save(recorder=self.request.user)
 
             success_response = {
                 "status": "success",
                 "message": "Disability record created successfully.",
-                "data": serializer.data
+                "data": DisabilityRecordSerializer(disability_record).data
             }
-            
             return Response(success_response, status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": "Internal Server Error: " + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            error_response = {
+                "status": "error",
+                "message": "Validation error occurred while creating disability record.",
+                "errors": e.detail  
+            }
+            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
 
-    def perform_create(self, serializer):
-        
-        serializer.save(recorder=self.request.user)        
+        except Exception as e:
+            error_response = {
+                "status": "error",
+                "message": "An unexpected error occurred while creating the disability record.",
+                "error": str(e)  
+            }
+            return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # Retrieve, Update, and Delete Disability Record
 class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DisabilityRecord.objects.all()
