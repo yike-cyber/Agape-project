@@ -1,6 +1,7 @@
 from django.contrib.auth import login, logout, authenticate
 from django.template.loader import render_to_string
 from django.core.exceptions import ValidationError
+from django.contrib.auth.hashers import check_password
 
 from django.db.models import Q
 from django.http import HttpResponse
@@ -269,6 +270,7 @@ class UserUpdatePasswordView(APIView):
         if request.user != user and request.user.role != 'admin':
             raise AuthenticationFailed("You are not authorized to update this password.")
 
+        old_password = request.data.get('old_password')
         password = request.data.get('password')
         password2 = request.data.get('password2')
         
@@ -276,7 +278,11 @@ class UserUpdatePasswordView(APIView):
             return Response({
                 "message": "Passwords do not match."
             }, status=status.HTTP_400_BAD_REQUEST)
-
+         
+        if not check_password(old_password,user.password):
+            return Response({
+                "message":"yor old password is not correct"
+            },status = status.HTTP_400_BAD_REQUEST)
         user.set_password(password)
         user.save()
         
