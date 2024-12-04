@@ -40,6 +40,7 @@ class EquipmentSerializer(serializers.ModelSerializer):
             'id', 'equipment_type', 'size', 'cause_of_need', 
             'created_at', 'updated_at'
         ]
+        
 class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
     warrant = WarrantSerializer()
@@ -61,22 +62,20 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.profile_image:
             return request.build_absolute_uri(obj.profile_image.url)
+        print('setting media url',settings.MEDIA_URL)
         return request.build_absolute_uri(settings.MEDIA_URL + 'default_profile_image/avatar.png')
 
     def create(self, validated_data):
-        # Pop nested data
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
 
-        # Create the DisabilityRecord instance
         disability_record = DisabilityRecord.objects.create(**validated_data)
 
-        # Handle Warrant
         if warrant_data:
             warrant_serializer = WarrantSerializer(data=warrant_data,partial = True)
             warrant_serializer.is_valid(raise_exception=True)
             warrant = warrant_serializer.save()
-            disability_record.warrant = warrant  # Associate with DisabilityRecord
+            disability_record.warrant = warrant  
 
         # Handle Equipment
         if equipment_data:

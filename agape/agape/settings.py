@@ -169,5 +169,7 @@ cloudinary.config(
     cloudinary_url=CLOUDINARY_URL
 )
 
+print('setting media url',MEDIA_URL)
+
 
 

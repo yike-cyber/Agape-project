@@ -6,7 +6,7 @@ from django.conf import settings
 
 class CustomUserAdmin(UserAdmin):
     model = User
-    list_display = ['first_name', 'last_name', 'email', 'role', 'profile_image_display', 'is_active', 'deleted']
+    list_display = ['first_name', 'last_name','phone_number', 'email', 'role', 'profile_image_display', 'is_active', 'deleted']
     search_fields = ['first_name', 'last_name', 'email', 'phone_number']
     ordering = ['first_name']
 
@@ -27,11 +27,11 @@ class CustomUserAdmin(UserAdmin):
 
     # Custom method to display profile image
     def profile_image_display(self, obj):
-        if obj.profile_image:
-            print(obj.profile_image.url)
+        if obj.profile_image and hasattr(obj.profile_image, 'url'):
             return mark_safe(f'<img src="{obj.profile_image.url}" width="50" height="50" />')
         else:
-             return mark_safe(f'<img src="{settings.MEDIA_URL}default_profile_image/avatar.png" width="50" height="50" />')
+            default_image_url = f'{settings.MEDIA_URL}default_profile_image/avatar.png'
+            return mark_safe(f'<img src="{default_image_url}" width="50" height="50" />')
 
     profile_image_display.short_description = 'Profile Image'
     

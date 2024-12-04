@@ -33,10 +33,10 @@ from .constants import SUCCESS_RESPONSE, ERROR_RESPONSE
 from .pagination import CustomPagination
 
 class RegisterView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        if not request.user.is_authenticated or request.user.role != 'admin':
+        if request.user.role != 'admin':
             response_data = ERROR_RESPONSE.copy()
             response_data["message"] = "You are not authorized to create users."
             response_data["error_code"] = 403
@@ -63,7 +63,6 @@ class RegisterView(APIView):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "role": user.role,
-                "profile_image_url": user.profile_image.url if user.profile_image else None,
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
 
