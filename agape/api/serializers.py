@@ -29,13 +29,20 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class WarrantSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
     class Meta:
         model = Warrant
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 
             'gender', 'phone_number', 'id_image', 
-            'deleted'
+            'deleted','created_at', 'updated_at', 'profile_image_url'
         ]
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if request and obj.profile_image:
+            print('request exist')
+            return request.build_absolute_uri(obj.profile_image.url)
+        return obj.profile_image.url if obj.profile_image else None
 
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
