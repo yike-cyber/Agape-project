@@ -823,23 +823,22 @@ class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(success_response, status=status.HTTP_200_OK)
         
 # Filter Disability Records
+
 class DisabilityRecordListFilterView(generics.ListAPIView):
     serializer_class = DisabilityRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_queryset(self):
         queryset = DisabilityRecord.objects.all()
-        
-
-        # Get query parameters from the request
         gender = self.request.query_params.get('gender')
         is_provided = self.request.query_params.get('is_provided')
         region = self.request.query_params.get('region')
-        wheelchair_type = self.request.query_params.get('wheelchair_type')
+        equipment_type = self.request.query_params.get('equipment_type')
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
+        print('start',start_date)
 
         # Filter by gender if provided
         if gender:
@@ -851,9 +850,8 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
         if region:
             queryset = queryset.filter(region__icontains=region)
 
-        # Filter by wheelchair type if provided
-        if wheelchair_type:
-            queryset = queryset.filter(wheelchair_type__icontains=wheelchair_type)
+        if equipment_type:
+            queryset = queryset.filter(equipment__equipment_type__icontains=equipment_type)
 
         if month and year:
             try:
@@ -861,16 +859,18 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
                 year = int(year)
                 queryset = queryset.filter(date_of_birth__month=month, date_of_birth__year=year)
             except ValueError:
-                pass  # Ignore if invalid month/year format
+                pass  
 
-        # Filter by start_date and end_date if provided
         if start_date:
+            print('start date',start_date)
             try:
                 start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
                 start_date = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
                 queryset = queryset.filter(created_at__gte=start_date)
+                print('query set',queryset)
             except ValueError:
-                pass  # Ignore if invalid start_date format
+                print('value error')
+                pass  
 
         if end_date:
             try:
@@ -878,29 +878,36 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
                 end_date = timezone.make_aware(datetime.combine(end_date, datetime.min.time()))
                 queryset = queryset.filter(created_at__lte=end_date)
             except ValueError:
+                print('value error here')
                 pass  
 
         return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        filter_values = {key: value for key, value in request.query_params.items()}
+
         if not queryset.exists():
-            error_response = ERROR_RESPONSE.copy()
-            error_response["message"] = "No disability records found matching the search criteria."
+            error_response = {
+                "status": "error",
+                "message": "No disability records found matching the search criteria.",
+                "filter_values":filter_values
+            }
             return Response(error_response, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.get_serializer(queryset, many=True)
-        
-        success_response = SUCCESS_RESPONSE.copy()
-        success_response["message"] = "Disability records retrieved successfully."
-        success_response["data"] = serializer.data
+
+        success_response = {
+            "status": "success",
+            "message": "Disability records retrieved successfully.",
+            "filters": filter_values, 
+            "data": serializer.data
+        }
         return Response(success_response, status=status.HTTP_200_OK)
 
 
-
 class FileExportView(APIView):
-    # permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [permissions.IsAuthenticated]
     def post(self, request):
         
         filters = request.data.get("filters", {})
@@ -914,7 +921,6 @@ class FileExportView(APIView):
 
         data = list(queryset.values(*columns))
 
-        # Generate the file in the requested format
         if file_format == "csv":
             return self.generate_csv(data, columns)
         elif file_format == "excel":
