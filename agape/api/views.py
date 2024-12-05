@@ -698,18 +698,16 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
 
         if search_term:
             filters = Q(
-                Q(gender__icontains=search_term) |
-                Q(phone_number__icontains=search_term) |
+                Q(gender__contains=search_term) |
+                Q(phone_number__contains=search_term) |
                 Q(region__icontains=search_term) |
                 Q(first_name__icontains=search_term) |
                 Q(middle_name__icontains=search_term) |
                 Q(last_name__icontains=search_term) |
                 Q(city__icontains=search_term) |
                 Q(zone__icontains=search_term) |
-                Q(woreda__icontains=search_term) |
-                Q(hip_width__icontains=search_term) |
-                Q(backrest_height__icontains=search_term) |
-                Q(thigh_length__icontains=search_term)
+                Q(woreda__icontains=search_term) 
+                
             )
             queryset = queryset.filter(filters)
 
@@ -814,9 +812,8 @@ class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(success_response, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
         disability = self.get_object()
-        serializer = self.get_serializer(disability, data=request.data, partial=partial)
+        serializer = self.get_serializer(disability, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
