@@ -51,9 +51,9 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=15, null=True, unique=True)
     profile_image = CloudinaryField(
         'image',
-        default='avatar_zopzfl.png',
         blank=True,
-        null=True
+        null=True,
+        folder ='users/profile_images'
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='field_worker')
     is_active = models.BooleanField(default=False)
@@ -89,7 +89,7 @@ class Warrant(models.Model):
         'image',
         blank=True,
         null=True,
-        folder = 'warrant_id_images'
+        folder = 'warrants/warrant_id_images'
     )
     deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,null = True,blank = True)
@@ -133,7 +133,6 @@ class DisabilityRecord(models.Model):
     thigh_length = models.FloatField()
     profile_image = CloudinaryField(
         'image',
-        default='avatar_zopzfl.png',
         blank=True,
         null=True,
         folder = 'disability_records/profile_images'
@@ -157,12 +156,4 @@ class DisabilityRecord(models.Model):
     def get_full_name(self):
         return f"{self.first_name} {self.middle_name} {self.last_name}"
     
-    def profile_image_preview(self):
-        if self.profile_image:
-            return mark_safe(f'<img src="{self.profile_image.url}" width="50" height="50" />')
-        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
-
-    def kebele_id_image_preview(self):
-        if self.kebele_id_image:  # Corrected to check kebele_id_image instead of profile_image
-            return mark_safe(f'<img src="{self.kebele_id_image.url}" width="50" height="50" />')
-        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
+    

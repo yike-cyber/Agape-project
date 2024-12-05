@@ -21,10 +21,12 @@ class UserSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at','profile_image'
         ]
     def get_profile_image(self, obj):
-        request = self.context.get('request')
-        if request and obj.profile_image:
-            return request.build_absolute_uri(obj.profile_image.url)
-        return obj.profile_image.url if obj.profile_image else None
+        if obj.profile_image:
+            request = self.context.get('request')
+            if request:
+                return obj.profile_image.url
+        return None
+        
     
 
 
@@ -38,10 +40,11 @@ class WarrantSerializer(serializers.ModelSerializer):
             'deleted','created_at', 'updated_at'
         ]
     def get_id_image(self, obj):
-        request = self.context.get('request')
-        if request and obj.id_image:
-            return request.build_absolute_uri(obj.id_image.url)
-        return obj.id_image.url if obj.id_image.url else None
+        if obj.id_image: 
+            request = self.context.get('request')
+            if request:
+               return obj.id_image.url
+        return None
 
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -70,17 +73,21 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
         ]
 
     def get_profile_image(self, obj):
-        request = self.context.get('request')
-        if request and obj.profile_image:
-            return request.build_absolute_uri(obj.profile_image.url)
-        return obj.profile_image.url if obj.profile_image else None
+        if obj.profile_image:
+            request = self.context.get('request')
+            if request:
+                return obj.profile_image.url
+        return None
     
     def get_kebele_id_image(self, obj):
-        request = self.context.get('request')
-        if request and obj.kebele_id_image:
-            return request.build_absolute_uri(obj.kebele_id_image.url)
-        return obj.kebele_id_image.url if obj.kebele_id_image else None
-
+        if obj.kebele_id_image:
+            request = self.context.get('request')
+            if request:
+               return obj.kebele_id_image.url
+        return None
+            
+            
+            
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
