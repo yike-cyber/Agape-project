@@ -11,38 +11,37 @@ from django.conf import settings
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
-    profile_image_url = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id', 'email', 'first_name', 'middle_name', 'last_name', 
             'gender', 'phone_number', 'profile_image','is_active', 'role', 
-            'created_at', 'updated_at','profile_image_url'
+            'created_at', 'updated_at','profile_image'
         ]
-    def get_profile_image_url(self, obj):
+    def get_profile_image(self, obj):
         request = self.context.get('request')
         if request and obj.profile_image:
-            print('request exist')
             return request.build_absolute_uri(obj.profile_image.url)
         return obj.profile_image.url if obj.profile_image else None
+    
 
 
 class WarrantSerializer(serializers.ModelSerializer):
-    profile_image_url = serializers.SerializerMethodField()
+    id_image = serializers.SerializerMethodField()
     class Meta:
         model = Warrant
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 
             'gender', 'phone_number', 'id_image', 
-            'deleted','created_at', 'updated_at', 'profile_image_url'
+            'deleted','created_at', 'updated_at'
         ]
-    def get_profile_image_url(self, obj):
+    def get_id_image(self, obj):
         request = self.context.get('request')
-        if request and obj.profile_image:
-            print('request exist')
-            return request.build_absolute_uri(obj.profile_image.url)
-        return obj.profile_image.url if obj.profile_image else None
+        if request and obj.id_image:
+            return request.build_absolute_uri(obj.id_image.url)
+        return obj.id_image.url if obj.id_image.url else None
 
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,7 +55,8 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
     warrant = WarrantSerializer()
     equipment = EquipmentSerializer()
-    profile_image_url = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
+    kebele_id_image = serializers.SerializerMethodField()
 
     class Meta:
         model = DisabilityRecord
@@ -66,15 +66,20 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
             'woreda', 'recorder', 'warrant', 'equipment',
             'hip_width', 'backrest_height', 'thigh_length',
             'profile_image', 'kebele_id_image', 'is_provided',
-            'deleted', 'is_active', 'created_at', 'updated_at', 'profile_image_url',
+            'deleted', 'is_active', 'created_at', 'updated_at'
         ]
 
-    def get_profile_image_url(self, obj):
+    def get_profile_image(self, obj):
         request = self.context.get('request')
         if request and obj.profile_image:
-            print('request exist')
             return request.build_absolute_uri(obj.profile_image.url)
         return obj.profile_image.url if obj.profile_image else None
+    
+    def get_kebele_id_image(self, obj):
+        request = self.context.get('request')
+        if request and obj.kebele_id_image:
+            return request.build_absolute_uri(obj.kebele_id_image.url)
+        return obj.kebele_id_image.url if obj.kebele_id_image else None
 
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant', None)
