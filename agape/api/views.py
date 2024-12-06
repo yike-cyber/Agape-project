@@ -757,33 +757,22 @@ class DisabilityRecordListCreateView(generics.ListCreateAPIView):
             }
         }
         return paginator.get_paginated_response(success_response)
-
-    def perform_create(self, serializer):
-        try:
-            disability_record = serializer.save(recorder=self.request.user)
-
-            success_response = {
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data,partial = True)
+        if serializer.is_valid():
+            disability_record = serializer.save(recorder=request.user)
+            return Response({
                 "status": "success",
                 "message": "Disability record created successfully.",
-                "data": DisabilityRecordSerializer(disability_record).data
-            }
-            return Response(success_response, status=status.HTTP_201_CREATED)
-
-        except ValidationError as e:
-            error_response = {
-                "status": "error",
-                "message": "Validation error occurred while creating disability record.",
-                "errors": e.detail  
-            }
-            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            error_response = {
-                "status": "error",
-                "message": "An unexpected error occurred while creating the disability record.",
-                "error": str(e)  
-            }
-            return Response(error_response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                "data": self.get_serializer(disability_record).data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response({
+            "status": "error",
+            "message": "Validation failed.",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 # Retrieve, Update, and Delete Disability Record
 class DisabilityRecordDetailView(generics.RetrieveUpdateDestroyAPIView):

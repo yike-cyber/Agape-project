@@ -9,42 +9,41 @@ from django.conf import settings
 
 
 User = get_user_model()
-
 class UserSerializer(serializers.ModelSerializer):
-    profile_image = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id', 'email', 'first_name', 'middle_name', 'last_name', 
-            'gender', 'phone_number', 'profile_image','is_active', 'role', 
-            'created_at', 'updated_at','profile_image'
+            'gender', 'phone_number', 'profile_image', 'profile_image_url',
+            'is_active', 'role', 'created_at', 'updated_at'
         ]
-    def get_profile_image(self, obj):
+
+    def get_profile_image_url(self, obj):
         if obj.profile_image:
             request = self.context.get('request')
-            if request:
-                return obj.profile_image.url
+            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
         return None
-        
-    
 
 
 class WarrantSerializer(serializers.ModelSerializer):
-    id_image = serializers.SerializerMethodField()
+    id_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Warrant
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 
-            'gender', 'phone_number', 'id_image', 
-            'deleted','created_at', 'updated_at'
+            'gender', 'phone_number', 'id_image', 'id_image_url',
+            'deleted', 'created_at', 'updated_at'
         ]
-    def get_id_image(self, obj):
-        if obj.id_image: 
+
+    def get_id_image_url(self, obj):
+        if obj.id_image:
             request = self.context.get('request')
-            if request:
-               return obj.id_image.url
+            return request.build_absolute_uri(obj.id_image.url) if request else obj.id_image.url
         return None
+
 
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -53,13 +52,14 @@ class EquipmentSerializer(serializers.ModelSerializer):
             'id', 'equipment_type', 'size', 'cause_of_need', 
             'created_at', 'updated_at'
         ]
-        
+
+
 class DisabilityRecordSerializer(serializers.ModelSerializer):
     recorder = UserSerializer(read_only=True)
     warrant = WarrantSerializer()
     equipment = EquipmentSerializer()
-    profile_image = serializers.SerializerMethodField()
-    kebele_id_image = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
+    kebele_id_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = DisabilityRecord
@@ -68,40 +68,44 @@ class DisabilityRecordSerializer(serializers.ModelSerializer):
             'phone_number', 'date_of_birth', 'region', 'zone', 'city',
             'woreda', 'recorder', 'warrant', 'equipment',
             'hip_width', 'backrest_height', 'thigh_length',
-            'profile_image', 'kebele_id_image', 'is_provided',
-            'deleted', 'is_active', 'created_at', 'updated_at'
+            'profile_image', 'profile_image_url', 'kebele_id_image', 'kebele_id_image_url',
+            'is_provided', 'deleted', 'is_active', 'created_at', 'updated_at'
         ]
 
-    def get_profile_image(self, obj):
+    def get_profile_image_url(self, obj):
         if obj.profile_image:
             request = self.context.get('request')
-            if request:
-                return obj.profile_image.url
+            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
         return None
-    
-    def get_kebele_id_image(self, obj):
+
+    def get_kebele_id_image_url(self, obj):
         if obj.kebele_id_image:
             request = self.context.get('request')
-            if request:
-               return obj.kebele_id_image.url
+            return request.build_absolute_uri(obj.kebele_id_image.url) if request else obj.kebele_id_image.url
         return None
-            
-            
-            
+
+   
     def create(self, validated_data):
         warrant_data = validated_data.pop('warrant', None)
         equipment_data = validated_data.pop('equipment', None)
-
+        
+        profile_image = validated_data.pop('profile_image', None)
+        kebele_id_image = validated_data.pop('kebele_id_image', None)
+        print("kebele id image",kebele_id_image)
+        print("profile image",profile_image)
         try:
-            disability_record = DisabilityRecord.objects.create(**validated_data)
+            disability_record = DisabilityRecord.objects.create(**validated_data, profile_image=profile_image,kebele_id_image=kebele_id_image)
 
             if warrant_data:
+                print('warrant data',warrant_data)
                 warrant_serializer = WarrantSerializer(data=warrant_data, partial=True)
                 warrant_serializer.is_valid(raise_exception=True)
                 warrant = warrant_serializer.save()
+                print('warrant image',warrant.id_image)
                 disability_record.warrant = warrant
 
             if equipment_data:
+                print('equipment data',equipment_data)
                 equipment_serializer = EquipmentSerializer(data=equipment_data, partial=True)
                 equipment_serializer.is_valid(raise_exception=True)
                 equipment = equipment_serializer.save()

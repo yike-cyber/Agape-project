@@ -92,8 +92,8 @@ class Warrant(models.Model):
         folder = 'warrants/warrant_id_images'
     )
     deleted = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True,null = True,blank = True)
-    updated_at = models.DateTimeField(auto_now=True,null = True,blank = True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
