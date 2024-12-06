@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     RegisterView, VerifyEmailView,VerifyOTPView, LoginView, ResetPasswordView,
     SetNewPasswordView, LogoutView,CurrentUserProfileView,
-     UserListCreateView, UserDetailView,UserUpdatePasswordView, UserFilterView,UserBlockView,DeleteUserPermanentlyView,
+     UserListCreateView, UserDetailView,UserUpdatePasswordView, UserFilterView,BlockedUserListView,UserBlockView,DeleteUserPermanentlyView,
     WarrantListCreateView, WarrantDetailView,
     DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView,FileExportView
     
@@ -24,6 +24,7 @@ urlpatterns = [
     
     path('users/', UserListCreateView.as_view(), name='user-list-create'),
     path('users/<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/blocked/', BlockedUserListView.as_view(), name='blocked-users'),
     path('users/<uuid:id>/block/', UserBlockView.as_view(), name='block-user'),
     path('users/<uuid:id>/delete/', DeleteUserPermanentlyView.as_view(), name='delete-user'),
     path('users/<uuid:id>/update-password/', UserUpdatePasswordView.as_view(), name='update-password'),

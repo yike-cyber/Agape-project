@@ -44,13 +44,13 @@ class WarrantAdmin(admin.ModelAdmin):
     def id_image_preview(self, obj):
         if obj.id_image:
             return mark_safe(f'<img src="{obj.id_image.url}" width="50" height="50" />')
-        return mark_safe('<img src="https://res.cloudinary.com/dacglftgb/image/upload/vdefault/avatar.png" width="50" height="50" />')
+        return None
     id_image_preview.short_description = 'ID Image'
 
 
 # Disability Record Admin
 class DisabilityRecordAdmin(admin.ModelAdmin):
-    list_display = ['get_full_name', 'gender', 'region', 'is_active', 'is_provided', 'profile_image_preview']
+    list_display = ['get_full_name', 'gender', 'region', 'is_active', 'is_provided', 'profile_image_preview','deleted','created_at','updated_at']
     search_fields = ['first_name', 'last_name', 'region', 'zone', 'city']
     list_filter = ['gender', 'region', 'is_active', 'is_provided']
 

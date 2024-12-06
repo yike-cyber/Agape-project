@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'middle_name', 'last_name', 
             'gender', 'phone_number', 'profile_image', 'profile_image_url',
-            'is_active', 'role', 'created_at', 'updated_at'
+            'is_active', 'role','created_at', 'updated_at'
         ]
 
     def get_profile_image_url(self, obj):
@@ -197,7 +197,7 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get('email')
         password = attrs.get('password')
-
+        
         user = User.objects.filter(email=email).first()
         if not user:
             raise serializers.ValidationError(_("Invalid credentials"))

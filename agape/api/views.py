@@ -136,6 +136,7 @@ class LoginView(APIView):
             email = serializer.validated_data['email']
             password = serializer.validated_data['password']
             user = authenticate(request, email=email, password=password)
+            print('user',user)
 
             if user:
                 refresh = RefreshToken.for_user(user)
@@ -323,7 +324,7 @@ class UserListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = self.queryset.filter(deleted=False,is_active=True)
+        queryset = self.queryset.filter(deleted=False,is_active=True,is_superuser=False)
         search_term = self.request.query_params.get('search', None)
         if search_term:
             filters = Q(
@@ -442,6 +443,27 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
+
+class BlockedUserListView(generics.ListAPIView):
+    queryset = User.objects.filter(is_active=False) 
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+
+        if not queryset.exists():
+            return Response({
+                "message": "No blocked users found.",
+                "data": []
+            }, status=status.HTTP_200_OK)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "message": "Blocked users retrieved successfully.",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+    
 class UserBlockView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'
