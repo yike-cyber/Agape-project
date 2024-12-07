@@ -268,7 +268,7 @@ class UserUpdatePasswordView(APIView):
 
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
-        if request.user != user and request.user.role != 'admin':
+        if request.user != user and request.user.role != 'admin' and request.user.is_superuser == False:
             raise AuthenticationFailed("You are not authorized to update this password.")
 
         old_password = request.data.get('old_password')
@@ -324,7 +324,12 @@ class UserListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = self.queryset.filter(deleted=False,is_active=True,is_superuser=False)
+        
+        if self.request.user.is_superuser:
+             queryset = self.queryset.filter(is_active=True)
+        else:
+            queryset = self.queryset.filter(is_active=True,is_superuser=False)
+            
         search_term = self.request.query_params.get('search', None)
         if search_term:
             filters = Q(
@@ -445,7 +450,7 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
 
 
 class BlockedUserListView(generics.ListAPIView):
-    queryset = User.objects.filter(is_active=False) 
+    queryset = User.objects.filter(is_active=False, is_superuser=False) 
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -475,7 +480,7 @@ class UserBlockView(APIView):
             raise NotFound(detail="User not found.")
     
     def patch(self, request, *args, **kwargs):
-        if request.user.role == 'admin':
+        if request.user.role == 'admin' or request.user.is_superuser:
             user = self.get_object()
             user.is_active = not user.is_active
             user.save()
@@ -497,17 +502,26 @@ class DeleteUserPermanentlyView(generics.DestroyAPIView):
 
     def get_object(self):
         try:
-           user = self.get_queryset().get(id = self.kwargs[self.lookup_field])
-           return user
+            user = None
+            if self.request.user.is_superuser:
+                user =self.get_queryset().get(id = self.kwargs[self.lookup_field])
+            else:
+                 user = self.get_queryset().get(id = self.kwargs[self.lookup_field], is_superuser = False)
+            return user
         except User.DoesNotExist:
             raise NotFound(detail = 'user not found')
     
     def delete(self,request,*args,**kwargs):
-        user = self.get_object()
-        user.delete()
-        return Response({
-            "message":"user deleted Permanently." },
-             status=status.HTTP_204_NO_CONTENT)
+        if request.user.role=='admin':
+            user = self.get_object()
+            user.delete()
+            return Response({
+                "message":"user deleted Permanently." },
+                status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({
+                "message": "You are not allowed to perform this action."
+            }, status=status.HTTP_403_FORBIDDEN)
 
 #filtering users
 class UserFilterView(generics.ListAPIView):

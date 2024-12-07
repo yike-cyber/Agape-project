@@ -39,4 +39,8 @@ urlpatterns = [
     
     #file export
     path('disability-records/export/',FileExportView.as_view(), name='file-export'),
+    
+    #statistics
+    
+    # path()
 ]
