@@ -5,8 +5,7 @@ from .views import (
      UserListCreateView, UserDetailView,UserUpdatePasswordView, UserFilterView,BlockedUserListView,UserBlockView,DeleteUserPermanentlyView,
     WarrantListCreateView, WarrantDetailView,
     DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView,FileExportView,
-    UserStatsView, DisabilityStatsView
-    
+    DisabilityUserStatsView    
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -42,6 +41,5 @@ urlpatterns = [
     path('disability-records/export/',FileExportView.as_view(), name='file-export'),
     
     #statistics
-    path('users/stats/', UserStatsView.as_view(), name='user-stats'),
-    path('disability-records/stats/', DisabilityStatsView.as_view(), name='disability-stats'),
+    path('stats/', DisabilityUserStatsView.as_view(), name='stats'),
 ]

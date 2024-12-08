@@ -859,13 +859,13 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
         queryset = DisabilityRecord.objects.all()
         gender = self.request.query_params.get('gender')
         is_provided = self.request.query_params.get('is_provided')
-        region = self.request.query_params.get('region')
-        equipment_type = self.request.query_params.get('equipment_type')
+        regions = self.request.query_params.get('regions',[])
+        equipment_types = self.request.query_params.get('equipment_types',[])
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
-        print('start',start_date)
+        
 
         # Filter by gender if provided
         if gender:
@@ -874,19 +874,28 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
         if is_provided:
             queryset = queryset.filter(is_provided=is_provided)
 
-        if region:
-            queryset = queryset.filter(region__icontains=region)
+        if regions:
+            regions = regions.split(',')
+            queryset = queryset.filter(region__in=regions)
+        
+        if equipment_types:
+            equipment_types = equipment_types.split(',')
+            queryset = queryset.filter(equipment__equipment_type__in=equipment_types)
 
-        if equipment_type:
-            queryset = queryset.filter(equipment__equipment_type__icontains=equipment_type)
-
-        if month and year:
+        if year:
             try:
                 month = int(month)
                 year = int(year)
-                queryset = queryset.filter(date_of_birth__month=month, date_of_birth__year=year)
+                queryset = queryset.filter(created_at__year=year)
             except ValueError:
-                pass  
+                pass
+        if month:
+            try:
+                month = int(month)
+                queryset = queryset.filter(created_at__month=month)
+            except ValueError:
+                pass
+
 
         if start_date:
             print('start date',start_date)
@@ -928,6 +937,7 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
             "status": "success",
             "message": "Disability records retrieved successfully.",
             "filters": filter_values, 
+            "number_of_records": len(queryset),
             "data": serializer.data
         }
         return Response(success_response, status=status.HTTP_200_OK)
@@ -935,25 +945,49 @@ class DisabilityRecordListFilterView(generics.ListAPIView):
 
 class FileExportView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+
+    # Define the field aliases
+    field_aliases = {
+        'first_name': 'First Name',
+        'middle_name': 'Middle Name',
+        'last_name': 'Last Name',
+        'gender': 'Gender',
+        'phone_number': 'Phone Number',
+        'date_of_birth': 'Date of Birth',
+        'region': 'Region',
+        'zone': 'Zone',
+        'city': 'City',
+        'woreda': 'Woreda',
+        'created_at': 'Created At',
+        'equipment__equipment_type': 'Equipment Type',  # For nested fields
+    }
+
     def post(self, request):
-        
         filters = request.data.get("filters", {})
-        columns = request.data.get("columns", [])
         file_format = request.data.get("format", "excel") 
+        columns = request.data.get("columns", [])
+        
+        if isinstance(columns, str):
+            columns = columns.split(',')
+
+        if not columns:
+            columns = ["first_name","middle_name","last_name","gender","phone_number","date_of_birth","region","zone","city","woreda","created_at","equipment__equipment_type"]
 
         queryset = self.filter_queryset(filters)
-
         if not queryset.exists():
             return Response({"error": "No records found for the provided filters"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Map columns to their aliases
+        columns_with_aliases = [self.field_aliases.get(col, col) for col in columns]
         data = list(queryset.values(*columns))
 
+        # Generate the appropriate file format
         if file_format == "csv":
-            return self.generate_csv(data, columns)
+            return self.generate_csv(data, columns_with_aliases)
         elif file_format == "excel":
-            return self.generate_excel(data, columns)
+            return self.generate_excel(data, columns_with_aliases)
         elif file_format == "pdf":
-            return self.generate_pdf(data, columns)
+            return self.generate_pdf(data, columns_with_aliases)
         else:
             return Response({"error": "Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -961,12 +995,9 @@ class FileExportView(APIView):
         queryset = DisabilityRecord.objects.all()
 
         gender = filters.get('gender')
-        size = filters.get('size')
-        region = filters.get('region')
+        regions = filters.get('regions')
         is_provided = filters.get('is_provided')
-        equipment_type = filters.get('equipment_type')
-        month = filters.get('month')
-        year = filters.get('year')
+        equipment_types = filters.get('equipment_types')
         start_date = filters.get('start_date')
         end_date = filters.get('end_date')
 
@@ -976,22 +1007,13 @@ class FileExportView(APIView):
         if gender:
             queryset = queryset.filter(gender__iexact=gender)
 
-        if region:
-            queryset = queryset.filter(region__icontains=region)
+        if regions:
+            regions = regions.split(',')
+            queryset = queryset.filter(region__in=regions)
 
-        if equipment_type:
-            queryset = queryset.filter(equipment__equipment_type__icontains=equipment_type)
-            
-        if size:
-            queryset = queryset.filter(equipment__size=size)
-
-        if month and year:
-            try:
-                month = int(month)
-                year = int(year)
-                queryset = queryset.filter(date_of_birth__month=month, date_of_birth__year=year)
-            except ValueError:
-                pass
+        if equipment_types:
+            equipment_types = equipment_types.split(',')
+            queryset = queryset.filter(equipment__equipment_type__in=equipment_types)
 
         if start_date:
             try:
@@ -1011,19 +1033,25 @@ class FileExportView(APIView):
 
         return queryset
 
-    def generate_csv(self, data, columns):
-        
+    def generate_csv(self, data, columns_with_aliases):
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="export.csv"'
 
-        writer = csv.DictWriter(response, fieldnames=columns)
+        writer = csv.DictWriter(response, fieldnames=columns_with_aliases)
         writer.writeheader()
-        writer.writerows(data)
+
+        # Write data to CSV with aliases
+        for record in data:
+            record_with_aliases = {}
+            for key, value in record.items():
+                alias = self.field_aliases.get(key, key)  # Get alias, default to original key if no alias
+                record_with_aliases[alias] = value
+            writer.writerow(record_with_aliases)
         
         return response
 
-    def generate_excel(self, data, columns):
-        df = pd.DataFrame(data, columns=columns)
+    def generate_excel(self, data, columns_with_aliases):
+        df = pd.DataFrame(data, columns=columns_with_aliases)
         
         # Convert timezone-aware datetime fields to timezone-unaware for specific columns
         if 'created_at' in df.columns:
@@ -1042,10 +1070,9 @@ class FileExportView(APIView):
         )
         response["Content-Disposition"] = 'attachment; filename="export.xlsx"'
     
-
         return response
 
-    def generate_pdf(self, data, columns):
+    def generate_pdf(self, data, columns_with_aliases):
         # Create a PDF response
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = 'attachment; filename="export.pdf"'
@@ -1058,7 +1085,7 @@ class FileExportView(APIView):
         pdf.drawString(x, y, "Exported Data")
         y -= 20
         for record in data:
-            line = ", ".join([f"{col}: {record[col]}" for col in columns])
+            line = ", ".join([f"{col}: {record.get(col, '')}" for col in columns_with_aliases])
             pdf.drawString(x, y, line)
             y -= 20
             if y < 50:  
@@ -1071,49 +1098,42 @@ class FileExportView(APIView):
         response.write(buffer.getvalue())
         buffer.close()
 
-        return response
-    
-    
-class UserStatsView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        queryset = User.objects.all()
-        admins = queryset.filter(role="admin").count()
-        active_admins = queryset.filter(role="admin", is_active=True).count()
-        blocked_admins = queryset.filter(role="admin", is_active=False).count()
-        sub_admins = queryset.filter(role="field_worker").count()
-        active_sub_admins = queryset.filter(role="field_worker", is_active=True).count()
-        blocked_sub_admins = queryset.filter(role="field_worker", is_active=False).count()
-        
-        total_users = queryset.count()
-        return Response({"total_users": total_users, 
-                         "admins": admins,
-                         "active_admins": active_admins, 
-                         "blocked_admins": blocked_admins,
-                         "sub_admins": sub_admins,
-                         "active_sub_admins": active_sub_admins,
-                         "blocked_sub_admins": blocked_sub_admins},status = status.HTTP_200_OK)
-    
-class DisabilityStatsView(APIView):
+        return response    
+
+class DisabilityUserStatsView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        queryset = DisabilityRecord.objects.all()
-        total_records = queryset.count()
-        num_of_males = queryset.filter(gender="male").count()
-        num_of_females = queryset.filter(gender="female").count()
-        approved_records = queryset.filter(is_provided=True).count()
-        unapproved_records = queryset.filter(is_provided=False).count()
-        num_of_pediatric_wheelchair = queryset.filter(equipment__equipment_type="pediatric_wheelchair").count()
-        num_of_american_wheelchair = queryset.filter(equipment__equipment_type="american_wheelchair").count()
-        num_of_FWP_wheelchair = queryset.filter(equipment__equipment_type="FWP_wheelchair").count()
-        num_of_walker = queryset.filter(equipment__equipment_type="walker").count()
-        num_of_crutch = queryset.filter(equipment__equipment_type="crutch").count()
-        num_of_cane = queryset.filter(equipment__equipment_type="cane").count()
-        region_stats = queryset.values('region').annotate(count=Count('region'))
+        dis_queryset = DisabilityRecord.objects.all()
+        total_records = dis_queryset.count()
+        num_of_males = dis_queryset.filter(gender="male").count()
+        num_of_females = dis_queryset.filter(gender="female").count()
+        approved_records = dis_queryset.filter(is_provided=True).count()
+        unapproved_records = dis_queryset.filter(is_provided=False).count()
+        num_of_pediatric_wheelchair = dis_queryset.filter(equipment__equipment_type="pediatric_wheelchair").count()
+        num_of_american_wheelchair = dis_queryset.filter(equipment__equipment_type="american_wheelchair").count()
+        num_of_FWP_wheelchair = dis_queryset.filter(equipment__equipment_type="FWP_wheelchair").count()
+        num_of_walker = dis_queryset.filter(equipment__equipment_type="walker").count()
+        num_of_crutch = dis_queryset.filter(equipment__equipment_type="crutch").count()
+        num_of_cane = dis_queryset.filter(equipment__equipment_type="cane").count()
+        region_stats = dis_queryset.values('region').annotate(count=Count('region'))
         region_data = [{"region": region["region"], "count": region["count"]} for region in region_stats]
         
-        return Response({"total_records": total_records, 
+        
+        user_queryset = User.objects.all()
+        total_users = user_queryset.count()
+        admins = user_queryset.filter(role="admin").count()
+        active_admins = user_queryset.filter(role="admin", is_active=True).count()
+        blocked_admins = user_queryset.filter(role="admin", is_active=False).count()
+        sub_admins = user_queryset.filter(role="field_worker").count()
+        active_sub_admins = user_queryset.filter(role="field_worker", is_active=True).count()
+        blocked_sub_admins = user_queryset.filter(role="field_worker", is_active=False).count()
+        
+        
+        
+        return Response(
+                         {
+                         "disability":{
+                         "total_records": total_records, 
                          "num_of_males": num_of_males,
                          "num_of_females": num_of_females,
                          "approved_records": approved_records,
@@ -1126,6 +1146,20 @@ class DisabilityStatsView(APIView):
                          "num_of_crutch": num_of_crutch,
                          "num_of_cane": num_of_cane
                          },
-                         "region_data": region_data},status = status.HTTP_200_OK)
+                         "region_data": region_data
+                         },
+                         
+                         "users":{
+                         "total_users": total_users, 
+                         "admins": admins,
+                         "active_admins": active_admins, 
+                         "blocked_admins": blocked_admins,
+                         "sub_admins": sub_admins,
+                         "active_sub_admins": active_sub_admins,
+                         "blocked_sub_admins": blocked_sub_admins}
+                         
+                         },status = status.HTTP_200_OK)
+                         
+                         
 
 
