@@ -12,7 +12,6 @@ GENDER_CHOICES = [
     ('female', 'Female'),
 ]
 
-# Role Choices
 ROLE_CHOICES = [
     ('admin', 'Admin'),
     ('field_worker', 'Field Worker'),

@@ -2,6 +2,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.template.loader import render_to_string
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import check_password
+from django.db.models import Count
+
 
 from django.db.models import Q
 from django.http import HttpResponse
@@ -1070,5 +1072,60 @@ class FileExportView(APIView):
         buffer.close()
 
         return response
+    
+    
+class UserStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        queryset = User.objects.all()
+        admins = queryset.filter(role="admin").count()
+        active_admins = queryset.filter(role="admin", is_active=True).count()
+        blocked_admins = queryset.filter(role="admin", is_active=False).count()
+        sub_admins = queryset.filter(role="field_worker").count()
+        active_sub_admins = queryset.filter(role="field_worker", is_active=True).count()
+        blocked_sub_admins = queryset.filter(role="field_worker", is_active=False).count()
+        
+        total_users = queryset.count()
+        return Response({"total_users": total_users, 
+                         "admins": admins,
+                         "active_admins": active_admins, 
+                         "blocked_admins": blocked_admins,
+                         "sub_admins": sub_admins,
+                         "active_sub_admins": active_sub_admins,
+                         "blocked_sub_admins": blocked_sub_admins},status = status.HTTP_200_OK)
+    
+class DisabilityStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        queryset = DisabilityRecord.objects.all()
+        total_records = queryset.count()
+        num_of_males = queryset.filter(gender="male").count()
+        num_of_females = queryset.filter(gender="female").count()
+        approved_records = queryset.filter(is_provided=True).count()
+        unapproved_records = queryset.filter(is_provided=False).count()
+        num_of_pediatric_wheelchair = queryset.filter(equipment__equipment_type="pediatric_wheelchair").count()
+        num_of_american_wheelchair = queryset.filter(equipment__equipment_type="american_wheelchair").count()
+        num_of_FWP_wheelchair = queryset.filter(equipment__equipment_type="FWP_wheelchair").count()
+        num_of_walker = queryset.filter(equipment__equipment_type="walker").count()
+        num_of_crutch = queryset.filter(equipment__equipment_type="crutch").count()
+        num_of_cane = queryset.filter(equipment__equipment_type="cane").count()
+        region_stats = queryset.values('region').annotate(count=Count('region'))
+        region_data = [{"region": region["region"], "count": region["count"]} for region in region_stats]
+        
+        return Response({"total_records": total_records, 
+                         "num_of_males": num_of_males,
+                         "num_of_females": num_of_females,
+                         "approved_records": approved_records,
+                         "unapproved_records": unapproved_records,
+                         "equipments":{
+                         "num_of_aediatric_wheelchair": num_of_pediatric_wheelchair,
+                         "num_of-american_wheelchair": num_of_american_wheelchair,
+                         "num_of_FWP_wheelchair": num_of_FWP_wheelchair,
+                         "num_of_walker": num_of_walker,
+                         "num_of_crutch": num_of_crutch,
+                         "num_of_cane": num_of_cane
+                         },
+                         "region_data": region_data},status = status.HTTP_200_OK)
 
 

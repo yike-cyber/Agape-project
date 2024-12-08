@@ -4,7 +4,8 @@ from .views import (
     SetNewPasswordView, LogoutView,CurrentUserProfileView,
      UserListCreateView, UserDetailView,UserUpdatePasswordView, UserFilterView,BlockedUserListView,UserBlockView,DeleteUserPermanentlyView,
     WarrantListCreateView, WarrantDetailView,
-    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView,FileExportView
+    DisabilityRecordListCreateView, DisabilityRecordDetailView, DisabilityRecordListFilterView,FileExportView,
+    UserStatsView, DisabilityStatsView
     
 )
 
@@ -41,6 +42,6 @@ urlpatterns = [
     path('disability-records/export/',FileExportView.as_view(), name='file-export'),
     
     #statistics
-    
-    # path()
+    path('users/stats/', UserStatsView.as_view(), name='user-stats'),
+    path('disability-records/stats/', DisabilityStatsView.as_view(), name='disability-stats'),
 ]
